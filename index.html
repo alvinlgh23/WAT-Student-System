@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WAT Student US Map</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="map-stage" aria-label="Interactive United States state comparison map">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">WAT Student Planner</p>
+            <h1>Compare US states before choosing your Work and Travel destination.</h1>
+          </div>
+          <div class="metric-strip" aria-label="Selected state quick summary">
+            <span id="quickWage">$0/hr</span>
+            <span id="quickTax">0% tax</span>
+            <span id="quickScore">0/100</span>
+          </div>
+        </header>
+
+        <div class="map-wrap">
+          <svg
+            class="us-map"
+            id="usMap"
+            viewBox="0 0 975 610"
+            role="img"
+            aria-label="Interactive map of the United States"
+          >
+            <g id="stateLayer"></g>
+          </svg>
+          <div class="map-loading" id="mapLoading">Loading US map...</div>
+          <div class="map-tip" id="mapTip" role="status"></div>
+        </div>
+
+        <footer class="source-note">
+          MVP data uses 2026 public references where available and light estimates for comparison.
+          Verify exact local wages, city taxes, housing, and employer details before committing.
+          Sources:
+          <a href="https://www.paycor.com/resource-center/articles/minimum-wage-by-state/">minimum wage</a>,
+          <a href="https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/">income tax</a>,
+          <a href="https://taxfoundation.org/data/all/state/sales-tax-rates/">sales tax</a>.
+        </footer>
+      </section>
+
+      <aside class="state-panel" aria-live="polite">
+        <div class="panel-header">
+          <p class="eyebrow">Selected State</p>
+          <h2 id="stateName">New Jersey</h2>
+          <p id="stateVerdict">Good earning potential, but rent is painful.</p>
+        </div>
+
+        <div class="score-card">
+          <span>WAT Survival Score</span>
+          <strong id="survivalScore">72</strong>
+          <div class="score-track" aria-hidden="true">
+            <div id="scoreFill"></div>
+          </div>
+        </div>
+
+        <dl class="detail-list">
+          <div>
+            <dt>Minimum wage</dt>
+            <dd id="minWage">$15.13/hr</dd>
+          </div>
+          <div>
+            <dt>Average wage</dt>
+            <dd id="avgWage">$23/hr</dd>
+          </div>
+          <div>
+            <dt>State income tax</dt>
+            <dd id="incomeTax">1.40% - 10.75%</dd>
+          </div>
+          <div>
+            <dt>Sales tax</dt>
+            <dd id="salesTax">6.63%</dd>
+          </div>
+          <div>
+            <dt>Cost of living</dt>
+            <dd id="costLevel">High</dd>
+          </div>
+          <div>
+            <dt>Estimated rent</dt>
+            <dd id="rentRange">$900 - $1,450/mo</dd>
+          </div>
+          <div>
+            <dt>Monthly savings</dt>
+            <dd id="savings">$450 - $850</dd>
+          </div>
+        </dl>
+
+        <div class="legend">
+          <p>Map color</p>
+          <div><span class="legend-dot high"></span> Strong WAT fit</div>
+          <div><span class="legend-dot mid"></span> Balanced</div>
+          <div><span class="legend-dot low"></span> Higher caution</div>
+        </div>
+
+        <div class="premium-lock">
+          <span>Premium preview</span>
+          <p>Inflation by state, city-level rent, employer reviews, and trip planning can be layered into the next version.</p>
+        </div>
+      </aside>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
