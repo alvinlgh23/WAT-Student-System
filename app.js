@@ -3,6 +3,7 @@ const stateData = dataSet.states;
 const fipsToCode = dataSet.fipsToCode;
 const stateEntries = Object.entries(stateData).sort(([, a], [, b]) => a.name.localeCompare(b.name));
 const dataSourceRegistry = dataSet.dataSourceRegistry || {};
+const serviceRegistry = window.WAT_SERVICES || {};
 
 const REALITY_SOURCE_BASIS = {
   minimumWage: `${dataSourceRegistry.minimumWage?.status || "public reference"}: ${dataSourceRegistry.minimumWage?.source || "state labor departments"}.`,
@@ -571,6 +572,15 @@ const elements = {
   secondJobFields: document.querySelector("#secondJobFields"),
   secondJobWage: document.querySelector("#secondJobWage"),
   secondJobHours: document.querySelector("#secondJobHours"),
+  scheduleStability: document.querySelector("#scheduleStability"),
+  burnoutTolerance: document.querySelector("#burnoutTolerance"),
+  housingIncluded: document.querySelector("#housingIncluded"),
+  riskTolerance: document.querySelector("#riskTolerance"),
+  socialSpending: document.querySelector("#socialSpending"),
+  travelPersonality: document.querySelector("#travelPersonality"),
+  shoppingTendency: document.querySelector("#shoppingTendency"),
+  travelPacePreference: document.querySelector("#travelPacePreference"),
+  personalProfileForm: document.querySelector("#personalProfileForm"),
   simulatorNotice: document.querySelector("#simulatorNotice"),
   finalSavings: document.querySelector("#finalSavings"),
   savingsVerdict: document.querySelector("#savingsVerdict"),
@@ -830,6 +840,18 @@ function createDefaultAppState() {
     activeRankingMode: "savings",
     activeScenario: "normal",
     simulatorInputs: normalScenario,
+    workReality: {
+      scheduleStability: "stable",
+      burnoutTolerance: "medium",
+      housingIncluded: "unknown",
+    },
+    personalProfile: {
+      riskTolerance: "medium",
+      socialSpending: "medium",
+      travelPersonality: "balanced",
+      shoppingTendency: "medium",
+      travelPacePreference: "balanced",
+    },
     summerSettings: {
       startDate: liveDefaults.startDate,
       endDate: liveDefaults.endDate,
@@ -845,6 +867,7 @@ function createDefaultAppState() {
       days: 7,
       budget: 1400,
       style: "balanced",
+      pace: "balanced",
       interests: ["big cities", "nature", "food"],
     },
     customRouteInputs: {
@@ -886,6 +909,8 @@ function normalizeLoadedState(stored) {
     .slice(0, 3);
   if (merged.selectedComparisonStates.length < 2) merged.selectedComparisonStates = defaults.selectedComparisonStates;
   merged.simulatorInputs = { ...defaults.simulatorInputs, ...(merged.simulatorInputs || {}) };
+  merged.workReality = { ...defaults.workReality, ...(merged.workReality || {}) };
+  merged.personalProfile = { ...defaults.personalProfile, ...(merged.personalProfile || {}) };
   merged.summerSettings = { ...defaults.summerSettings, ...(merged.summerSettings || {}) };
   merged.dailyLogs = Array.isArray(merged.dailyLogs) ? merged.dailyLogs.slice(-120) : [];
   merged.routePlannerInputs = { ...defaults.routePlannerInputs, ...(merged.routePlannerInputs || {}) };
@@ -1300,6 +1325,8 @@ function calculateStressLevel(context) {
   const workRatio = context.weekly.hours / weeklyTarget;
   const targetGap = context.projectedSavings - Number(liveSummerState.savingsTarget || 0);
   const recentMood = liveSummerState.logs.at(-1)?.mood || "Chilling";
+  const workReality = appState?.workReality || {};
+  const profile = appState?.personalProfile || {};
 
   if (workRatio > 1.25) score += 24;
   else if (workRatio > 1.05) score += 12;
@@ -1313,6 +1340,13 @@ function calculateStressLevel(context) {
   else if (targetGap > 600) score -= 10;
 
   score += MOOD_STRESS[recentMood] || 0;
+  if (workReality.scheduleStability === "unstable") score += 10;
+  if (workReality.scheduleStability === "mixed") score += 5;
+  if (workReality.burnoutTolerance === "low") score += 8;
+  if (workReality.burnoutTolerance === "high") score -= 4;
+  if (profile.riskTolerance === "low" && context.travel.progress > 54) score += 7;
+  if (profile.socialSpending === "high") score += 5;
+  if (profile.shoppingTendency === "high") score += 5;
   score = clamp(score, 8, 96);
   if (score >= 82) return { label: "Burnout risk", value: score, copy: "Your schedule is getting heavy. Cut one pressure point before it cuts you." };
   if (score >= 66) return { label: "Overworked", value: score, copy: "You are pushing hard. The money can work, but recovery needs a slot too." };
@@ -1662,7 +1696,7 @@ const INTEREST_ROUTE_STOPS = {
   nightlife: ["New York City", "Miami", "Las Vegas", "New Orleans"],
 };
 
-// Evidence simulation data: replace with Google Places/Routes, Trends, CPI, and lodging APIs when connected.
+// API-ready travel evidence estimates. Replace with Google Places/Routes, Trends, CPI, and lodging APIs when connected.
 const CITY_EVIDENCE_PROFILES = {
   "new york city": { poi: 96, rating: 4.6, reviews: 980000, types: ["big cities", "food", "museums", "nightlife", "shopping"], cost: "very high", trend: "High global demand year-round", openingRisk: "Low" },
   boston: { poi: 76, rating: 4.5, reviews: 310000, types: ["big cities", "museums", "food"], cost: "high", trend: "Strong student/history demand", openingRisk: "Low" },
@@ -1683,12 +1717,14 @@ const CITY_EVIDENCE_PROFILES = {
 };
 
 const TRAVEL_EVIDENCE_SOURCE_BASIS = [
+  serviceRegistry.maps?.getSourceBasis?.() || "Google Maps Platform-ready architecture is prepared for routes, places, and distance validation.",
+  serviceRegistry.travel?.getSourceBasis?.() || "Travel evidence is API-ready, not live pricing.",
   "Distance/time: Google Routes API-ready. Current build uses a local coordinate heuristic.",
-  "Attractions: Google Places API-ready. Current build uses simulated POI density, rating, and review-volume signals.",
+  "Attractions: Google Places API-ready. Current build uses local placeholder POI, rating, and review-volume fields.",
   "Popularity: Google Trends API alpha-ready. Current build uses placeholder trend notes.",
   "Costs: heuristic city cost pressure, not live pricing.",
   "Accommodation: placeholder until hostel/hotel API integration is connected.",
-  "Evidence simulation — connect Google Routes/Places API for live validation.",
+  "Route evidence is currently estimated. Connect Google Routes/Places API for live validation.",
 ];
 
 function getCityEvidenceProfile(city) {
@@ -1865,12 +1901,13 @@ function renderEvidenceBasis(container, evidenceSummary) {
   container.replaceChildren(why);
 }
 
-function estimateTravelCost({ days, budget, style, currentState, startCity, interests }) {
+function estimateTravelCost({ days, budget, style, currentState, startCity, interests, pace }) {
   const multipliers = { budget: 0.82, balanced: 1, comfortable: 1.32 };
   const multiplier = multipliers[style] || 1;
   const region = REGION_BY_STATE[currentState] || "Northeast";
   const routePool = TRAVEL_ROUTE_SETS[region];
-  const stopCount = Math.min(4, Math.max(2, Math.ceil(days / 3)));
+  const paceConfig = inputPaceToStopFactor({ pace, days });
+  const stopCount = Math.min(paceConfig.maxStops, Math.max(2, Math.ceil(days / paceConfig.daysPerStop)));
   const interestStops = dedupeByName((interests || []).flatMap((interest) => INTEREST_ROUTE_STOPS[interest] || []));
   const pool = dedupeByName([...interestStops, ...routePool]);
   const start = startCity || routePool[0];
@@ -1902,6 +1939,12 @@ function estimateTravelCost({ days, budget, style, currentState, startCity, inte
     recommendation: item.recommendation,
   }));
   return { route, transport, accommodation, food, total, warning, stops, evidence, evidenceSummary };
+}
+
+function inputPaceToStopFactor({ pace, days }) {
+  if (pace === "deep") return { daysPerStop: 4, maxStops: Math.min(3, Math.max(2, days)) };
+  if (pace === "fast") return { daysPerStop: 2, maxStops: 5 };
+  return { daysPerStop: 3, maxStops: 4 };
 }
 
 function buildRoutePlan(input) {
@@ -2203,6 +2246,7 @@ function getRoutePlannerInputFromForm() {
     days: sanitizeNumber(elements.travelDays.value, 1, 1, 60),
     budget: sanitizeNumber(elements.tripBudget.value, 0, 0, 50000),
     style: elements.travelStyle.value,
+    pace: elements.travelPacePreference?.value || appState.personalProfile?.travelPacePreference || "balanced",
     interests: getSelectedInterests(),
   };
 }
@@ -2213,6 +2257,7 @@ function applyRoutePlannerInputs(input) {
   elements.travelDays.value = sanitizeNumber(input.days, 7, 1, 60);
   elements.tripBudget.value = sanitizeNumber(input.budget, 1400, 0, 50000);
   elements.travelStyle.value = input.style || "balanced";
+  if (elements.travelPacePreference) elements.travelPacePreference.value = input.pace || appState.personalProfile?.travelPacePreference || "balanced";
   const interests = new Set(input.interests || []);
   document.querySelectorAll(".interest-grid input").forEach((checkbox) => {
     checkbox.checked = interests.has(checkbox.value);
@@ -2232,11 +2277,43 @@ function applyCustomRouteInputs(input) {
   renderDestinationChips();
 }
 
+function getWorkRealitySnapshot() {
+  return {
+    scheduleStability: elements.scheduleStability?.value || "stable",
+    burnoutTolerance: elements.burnoutTolerance?.value || "medium",
+    housingIncluded: elements.housingIncluded?.value || "unknown",
+  };
+}
+
+function getPersonalProfileSnapshot() {
+  return {
+    riskTolerance: elements.riskTolerance?.value || "medium",
+    socialSpending: elements.socialSpending?.value || "medium",
+    travelPersonality: elements.travelPersonality?.value || "balanced",
+    shoppingTendency: elements.shoppingTendency?.value || "medium",
+    travelPacePreference: elements.travelPacePreference?.value || "balanced",
+  };
+}
+
+function applyProfileInputs() {
+  const work = appState.workReality || {};
+  const profile = appState.personalProfile || {};
+  if (elements.scheduleStability) elements.scheduleStability.value = work.scheduleStability || "stable";
+  if (elements.burnoutTolerance) elements.burnoutTolerance.value = work.burnoutTolerance || "medium";
+  if (elements.housingIncluded) elements.housingIncluded.value = work.housingIncluded || "unknown";
+  if (elements.riskTolerance) elements.riskTolerance.value = profile.riskTolerance || "medium";
+  if (elements.socialSpending) elements.socialSpending.value = profile.socialSpending || "medium";
+  if (elements.travelPersonality) elements.travelPersonality.value = profile.travelPersonality || "balanced";
+  if (elements.shoppingTendency) elements.shoppingTendency.value = profile.shoppingTendency || "medium";
+  if (elements.travelPacePreference) elements.travelPacePreference.value = profile.travelPacePreference || "balanced";
+}
+
 function applyAppStateToForms() {
   elements.stateSelect.value = activeState;
   applySimulatorInputs(appState.simulatorInputs);
   applyRoutePlannerInputs(appState.routePlannerInputs);
   applyCustomRouteInputs(appState.customRouteInputs);
+  applyProfileInputs();
   syncLiveSettingsForm();
 }
 
@@ -2842,6 +2919,7 @@ function updateCalculator() {
   const result = outcome.savings;
   const stress = outcome.stress;
   appState.simulatorInputs = input;
+  appState.workReality = getWorkRealitySnapshot();
   appState.selectedState = input.stateCode;
   activeState = input.stateCode;
   recalculateDerivedState();
@@ -3643,6 +3721,7 @@ function getSelectedInterests() {
 function updateTravelPlanner() {
   const plannerInput = getRoutePlannerInputFromForm();
   appState.routePlannerInputs = plannerInput;
+  appState.personalProfile = { ...appState.personalProfile, travelPacePreference: plannerInput.pace };
   if (plannerInput.currentState !== activeState) {
     appState.selectedState = plannerInput.currentState;
     appState.simulatorInputs = { ...appState.simulatorInputs, state: plannerInput.currentState, stateCode: plannerInput.currentState };
@@ -3662,7 +3741,7 @@ function updateTravelPlanner() {
   const overBudget = result.total > plannerInput.budget;
   const tooFewDays = plannerInput.days < Math.max(2, result.route.length - 1);
   const evidenceSummary = result.evidenceSummary || classifyRouteEvidence({ route: result.route.map(normalizePlace), cost: { total: result.total, legs: [] }, input: plannerInput, evidence: result.evidence || [] });
-  elements.tripWarning.textContent = `Evidence simulation — connect Google Routes/Places API for live validation. ${evidenceSummary.feasibility === "Weak" ? "This route may hurt your wallet." : "This route is best-supported under current assumptions."}`;
+  elements.tripWarning.textContent = `Route evidence is currently estimated. Connect Google Routes/Places API for live validation. ${evidenceSummary.feasibility === "Weak" ? "This route may hurt your wallet." : "This route is best-supported under current assumptions."}`;
   if (elements.routeFeasibility) elements.routeFeasibility.textContent = evidenceSummary.feasibility;
   if (elements.travelFreedomLevel) elements.travelFreedomLevel.textContent = `${evidenceSummary.freedom} · ${evidenceSummary.freedomValue}/100`;
   if (elements.routeFragilityLevel) elements.routeFragilityLevel.textContent = `${evidenceSummary.fragility} · ${evidenceSummary.fragilityValue}/100`;
@@ -3692,7 +3771,7 @@ function updateTravelPlanner() {
         <strong>${stop.city}</strong>
         <span>${stop.note}</span>
         <p><b>Why not longer?</b> ${(stop.recommendation?.whyNotLonger || []).slice(0, 2).join("; ")}.</p>
-        <p><b>Evidence:</b> POI density ${stop.evidence?.googlePlaces?.attractionDensityEstimate || "simulated"} · cost tier ${stop.evidence?.costPressure?.cityCostTier || "simulated"} · ${signals}.</p>
+        <p><b>Evidence:</b> POI estimate ${stop.evidence?.googlePlaces?.attractionDensityEstimate || "not connected"} · cost tier ${stop.evidence?.costPressure?.cityCostTier || "estimated"} · ${signals}.</p>
       `;
       return card;
     }),
@@ -3740,7 +3819,7 @@ function renderRouteTimeline(result, days) {
         <span>${daysLabel} · ${stop.intensity}</span>
         <strong>${stop.name}</strong>
         <p>${stop.note}</p>
-        <small>${stop.index === 0 ? "Route begins here" : `Evidence confidence: ${stop.evidence?.recommendation.confidence || "Medium"} · departure airport: ${stop.airport}`}</small>
+        <small>${stop.index === 0 ? "Route begins here" : `Data confidence: ${stop.evidence?.recommendation.confidence || "Medium"} · departure airport: ${stop.airport}`}</small>
       `;
       return card;
     }),
@@ -3815,7 +3894,7 @@ function updateRouteOptimizer() {
   elements.optimizedRoute.classList.remove("route-pop");
   requestAnimationFrame(() => elements.optimizedRoute.classList.add("route-pop"));
   const evidenceSummary = result.evidenceSummary || classifyRouteEvidence({ route: result.route, cost: result.cost, input: optimizerInput, evidence: result.evidence || [] });
-  elements.optimizerWarnings.textContent = `Evidence simulation — connect Google Routes/Places API for live validation. Best-supported route: ${result.route.map((stop) => stop.name).join(" → ")}. Feasibility: ${evidenceSummary.feasibility}. ${strategy.interpretation} ${result.warnings.join(" ")}`;
+  elements.optimizerWarnings.textContent = `Route evidence is currently estimated. Connect Google Routes/Places API for live validation. Best-supported route: ${result.route.map((stop) => stop.name).join(" → ")}. Feasibility: ${evidenceSummary.feasibility}. ${strategy.interpretation} ${result.warnings.join(" ")}`;
   elements.routeIntensity.textContent = getRouteIntensity(result.route, days);
   elements.routeType.textContent = getRouteType(result.route, result.cost);
   if (elements.optimizerConfidence) elements.optimizerConfidence.textContent = evidenceSummary.confidence;
@@ -4084,6 +4163,10 @@ function bindEvents() {
   document.querySelector("#simulatorForm").addEventListener("input", updateCalculator);
   document.querySelector("#travelForm").addEventListener("input", updateTravelPlanner);
   document.querySelector("#routeOptimizerForm").addEventListener("input", updateRouteOptimizer);
+  elements.personalProfileForm?.addEventListener("input", () => {
+    appState.personalProfile = getPersonalProfileSnapshot();
+    updateApp({ persist: true, skipForms: true, skipCalculator: false, skipTravel: false });
+  });
   document.querySelectorAll("[data-add-location]").forEach((button) => {
     button.addEventListener("click", () => addLocationToList(button.dataset.addLocation));
   });
