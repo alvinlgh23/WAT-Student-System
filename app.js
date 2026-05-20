@@ -3,6 +3,35 @@ const stateData = dataSet.states;
 const fipsToCode = dataSet.fipsToCode;
 const stateEntries = Object.entries(stateData).sort(([, a], [, b]) => a.name.localeCompare(b.name));
 
+const REALITY_SOURCE_BASIS = {
+  minimumWage: "Public reference data: state minimum wage law, checked against U.S. Department of Labor-style wage tables.",
+  federalTax: "Public reference data: IRS federal tax bracket assumptions used by the simulator.",
+  stateTax: "Public reference data: state income-tax range estimate.",
+  wageEstimate: "Estimated WAT assumption: common hourly job offers, tips, overtime, and employer quality can move this materially.",
+  livingCost: "Estimated benchmark: living-cost pressure calibrated from public cost benchmarks such as MIT Living Wage style data.",
+  rentRange: "Estimated WAT assumption: rent is a placeholder range until city, employer, housing deposit, and roommate data are added.",
+  score: "Heuristic interpretation: combines wage, rent, tax, costs, job density, travel access, volatility, and selected student strategy.",
+};
+
+const VERIFY_BEFORE_ACCEPTING = [
+  "housing cost and deposit",
+  "guaranteed weekly hours",
+  "commute method",
+  "overtime policy",
+  "whether meals are provided",
+  "whether a second job is realistic",
+  "local transport access",
+];
+
+const REALITY_TIER_DEFINITIONS = [
+  { min: 85, label: "Safe saver", meaning: "Strong chance of returning with cash if spending is controlled." },
+  { min: 70, label: "Balanced", meaning: "Can save and travel if rent stays reasonable." },
+  { min: 55, label: "High-variance", meaning: "Outcome depends heavily on employer, city, and housing." },
+  { min: 40, label: "Experience-heavy", meaning: "Good memories possible, but savings may be weak." },
+  { min: 25, label: "Fragile setup", meaning: "Small changes in rent, hours, or travel can break the plan." },
+  { min: 0, label: "Trap setup", meaning: "High risk of returning with little or negative savings unless conditions improve." },
+];
+
 // Placeholder demo data: replace with city-level research, sponsor/employer inputs, and student reviews later.
 const LOCAL_RECOMMENDATION_TEMPLATES = {
   cheapGroceries: ["Walmart, Aldi, Trader Joe's, and local Asian groceries are usually the first price checks.", "Use weekly flyers before buying bulk. Small resort towns often charge more."],
@@ -129,6 +158,8 @@ const REGION_BY_STATE = {
   HI: "Pacific",
 };
 
+enrichStateData();
+
 const SCENARIOS = {
   conservative: { label: "Conservative", hours: 30, rentFactor: 1.05, spendFactor: 1.08, travelBudget: 900, secondJob: false },
   normal: { label: "Normal", hours: 38, rentFactor: 1, spendFactor: 1, travelBudget: 1200, secondJob: false },
@@ -150,11 +181,212 @@ const STATE_PERSONALITIES = {
   WA: "High wages, high rent, serious planning required.",
 };
 
+function getRealityTier(score) {
+  return REALITY_TIER_DEFINITIONS.find((tier) => score >= tier.min) || REALITY_TIER_DEFINITIONS.at(-1);
+}
+
+function getCostPressureScore(costLevel) {
+  if (costLevel === "Very high") return 22;
+  if (costLevel === "High") return 16;
+  if (costLevel === "Medium") return 9;
+  return 4;
+}
+
+function getJobMarketScore(state) {
+  const wage = averageFromRange(state.averageWage);
+  let score = 52;
+  if (state.minimumWage >= 15) score += 16;
+  else if (state.minimumWage >= 12) score += 9;
+  else if (state.minimumWage <= 8) score -= 10;
+  if (wage >= 28) score += 18;
+  else if (wage >= 24) score += 10;
+  else if (wage < 20) score -= 8;
+  if (/tourism|hospitality|seasonal|metro|many jobs|large job/i.test(`${state.verdict} ${state.scoreFactors.join(" ")}`)) score += 8;
+  return clamp(score, 20, 95);
+}
+
+function getTravelAccessScore(code) {
+  const region = REGION_BY_STATE[code];
+  let score = { Northeast: 82, Southeast: 72, Midwest: 58, Mountain: 64, West: 76, Pacific: 70 }[region] || 58;
+  if (["CA", "FL", "NY", "NJ", "NV", "IL", "MA", "WA", "CO", "HI"].includes(code)) score += 10;
+  if (["ND", "SD", "WY", "WV", "MS", "AR"].includes(code)) score -= 8;
+  return clamp(score, 25, 96);
+}
+
+function getHousingVolatilityScore(state) {
+  const rent = averageFromRange(state.rentRange);
+  let score = 20;
+  if (rent >= 1500) score += 42;
+  else if (rent >= 1200) score += 30;
+  else if (rent >= 950) score += 18;
+  else if (rent <= 700) score -= 6;
+  if (state.costLevel === "Very high") score += 18;
+  else if (state.costLevel === "High") score += 10;
+  if (/housing|rent|city choice|logistics|park/i.test(`${state.verdict} ${state.scoreFactors.join(" ")}`)) score += 8;
+  return clamp(score, 10, 95);
+}
+
+function calculateRealityScore(code, studentType = activeStudentType || "saver") {
+  const state = stateData[code];
+  const wage = averageFromRange(state.averageWage);
+  const rent = averageFromRange(state.rentRange);
+  const savings = averageFromRange(state.savingsRange);
+  const taxRate = estimateStateIncomeTaxRate(code);
+  const wageStrength = clamp((wage - 15) * 5.2 + (state.minimumWage - 7.25) * 2.3, 10, 100);
+  const rentScore = clamp(100 - (rent - 500) / 12, 5, 100);
+  const taxScore = clamp(100 - taxRate * 900, 20, 100);
+  const costScore = clamp(100 - getCostPressureScore(state.costLevel) * 3.1, 10, 96);
+  const jobScore = getJobMarketScore(state);
+  const travelScore = getTravelAccessScore(code);
+  const volatilityScore = clamp(100 - getHousingVolatilityScore(state), 5, 95);
+  const savingsScore = clamp((savings - 250) / 7, 10, 100);
+  const weightsByType = {
+    saver: { wageStrength: 0.2, rentScore: 0.25, taxScore: 0.12, costScore: 0.15, jobScore: 0.08, travelScore: 0.06, volatilityScore: 0.08, savingsScore: 0.06 },
+    traveler: { wageStrength: 0.14, rentScore: 0.16, taxScore: 0.07, costScore: 0.1, jobScore: 0.1, travelScore: 0.24, volatilityScore: 0.08, savingsScore: 0.11 },
+    survivor: { wageStrength: 0.14, rentScore: 0.28, taxScore: 0.09, costScore: 0.18, jobScore: 0.09, travelScore: 0.05, volatilityScore: 0.13, savingsScore: 0.04 },
+    grinder: { wageStrength: 0.25, rentScore: 0.16, taxScore: 0.08, costScore: 0.09, jobScore: 0.18, travelScore: 0.06, volatilityScore: 0.05, savingsScore: 0.13 },
+  };
+  const weights = weightsByType[studentType] || weightsByType.saver;
+  const raw = Object.entries(weights).reduce((total, [key, weight]) => total + ({
+    wageStrength, rentScore, taxScore, costScore, jobScore, travelScore, volatilityScore, savingsScore,
+  })[key] * weight, 0);
+  const grinderPenalty = studentType === "grinder" && getHousingVolatilityScore(state) > 70 ? 4 : 0;
+  return Math.round(clamp(raw - grinderPenalty, 12, 96));
+}
+
+function getDataConfidence(code, score) {
+  const state = stateData[code];
+  const rent = averageFromRange(state.rentRange);
+  const volatility = getHousingVolatilityScore(state);
+  const taxKnown = !/range|-/i.test(state.incomeTax) || estimateStateIncomeTaxRate(code) <= 0.03;
+  if (rent >= 1350 || volatility >= 72 || state.costLevel === "Very high") {
+    return {
+      level: "Low",
+      reason: "Public wage and tax data are usable, but rent, city choice, and employer housing can swing the result hard.",
+    };
+  }
+  if (score >= 76 && volatility < 45 && taxKnown) {
+    return {
+      level: "High",
+      reason: "Wage law, tax assumptions, and cost pressure are comparatively clear. Still verify the employer offer.",
+    };
+  }
+  return {
+    level: "Medium",
+    reason: "Public wage/tax references are stable enough for planning, but housing and actual hours still depend on employer and city.",
+  };
+}
+
+function buildRealityProfile(code, studentType = activeStudentType || "saver") {
+  const state = stateData[code];
+  const score = calculateRealityScore(code, studentType);
+  const tier = getRealityTier(score);
+  const rent = averageFromRange(state.rentRange);
+  const wage = averageFromRange(state.averageWage);
+  const confidence = getDataConfidence(code, score);
+  const highRent = rent >= 1150;
+  const lowWage = wage < 21 || state.minimumWage <= 8;
+  const noTax = state.incomeTax.includes("No");
+  const strongTravel = getTravelAccessScore(code) >= 78;
+  const bestFor = [];
+  if (score >= 70 || noTax) bestFor.push("students trying to protect bring-home cash");
+  if (strongTravel) bestFor.push("travelers who can control early spending");
+  if (getJobMarketScore(state) >= 72) bestFor.push("students chasing stronger hours or tips");
+  if (!bestFor.length) bestFor.push("students with confirmed housing and reliable hours");
+  const dangerousFor = [];
+  if (highRent) dangerousFor.push("no housing support");
+  if (lowWage) dangerousFor.push("low-hour or minimum-wage placements");
+  if (strongTravel) dangerousFor.push("students who book travel before hours stabilize");
+  if (!dangerousFor.length) dangerousFor.push("students who accept without checking commute and scheduled hours");
+  const biggestRisk = highRent
+    ? "Rent can erase the wage advantage before the summer stabilizes."
+    : lowWage
+      ? "Low hourly offers can keep savings thin even when rent looks friendly."
+      : strongTravel
+        ? "Easy travel access can tempt early overspending."
+        : "Employer quality matters more than the state average.";
+  const verifyFirst = highRent ? "Employer housing cost and deposit." : lowWage ? "Minimum scheduled hours and overtime availability." : "Commute method and realistic weekly hours.";
+  const realityCheck = highRent
+    ? "High rent can erase wage advantage fast."
+    : noTax && lowWage
+      ? "No income tax helps, but low wages can still limit savings."
+      : strongTravel
+        ? "Travel access is a gift, but it can pull money out of the plan early."
+        : "This setup can work, but only if the employer offer is stronger than the state baseline.";
+  const warning = highRent
+    ? "This state looks strong on wages, but rent volatility can erase the advantage."
+    : noTax && lowWage
+      ? "No income tax helps, but low wages can still limit savings."
+      : strongTravel
+        ? "High travel access can tempt students into overspending early."
+        : "Low rent helps, but fewer city attractions may reduce experience value.";
+  const why = [
+    highRent ? "Rent burden is the main swing factor, so housing support changes the whole outcome." : "Rent burden is manageable enough that hours and spending discipline matter more.",
+    wage >= 24 ? "Wage upside exists, but the offer still needs guaranteed hours." : "Wage upside is limited, so minimum scheduled hours matter more than the headline state facts.",
+    strongTravel ? "Travel access is strong, which improves the experience but can weaken savings discipline." : "Travel access is more limited, which may protect money but reduce post-work flexibility.",
+    confidence.level === "Low" ? "Savings confidence is lower because city and housing variance are large." : "Savings confidence is usable for planning, not precise enough for blind acceptance.",
+  ];
+  return {
+    score,
+    tier: tier.label,
+    meaning: tier.meaning,
+    confidence,
+    bestFor,
+    dangerousFor,
+    biggestRisk,
+    verifyFirst,
+    realityCheck,
+    warning,
+    why,
+    verifyChecklist: VERIFY_BEFORE_ACCEPTING,
+    sourceBasis: REALITY_SOURCE_BASIS,
+    futureUserData: "Future version: student-submitted wage, rent, employer, and city data will improve this estimate.",
+  };
+}
+
+function enrichStateData() {
+  stateEntries.forEach(([code, state]) => {
+    const profile = buildRealityProfile(code, "saver");
+    state.publicData = {
+      minimumWage: state.minimumWage,
+      incomeTaxRange: state.incomeTax,
+      salesTax: state.salesTax,
+      sourceNotes: {
+        minimumWage: REALITY_SOURCE_BASIS.minimumWage,
+        incomeTax: REALITY_SOURCE_BASIS.stateTax,
+        salesTax: "Public reference data: state sales-tax baseline estimate; city/local add-ons can apply.",
+      },
+    };
+    state.estimatedWatData = {
+      expectedWatWageRange: state.averageWage,
+      rentRange: state.rentRange,
+      jobMarket: getJobMarketScore(state),
+      housingVolatility: getHousingVolatilityScore(state),
+      travelAccess: getTravelAccessScore(code),
+      typicalSavingsRange: state.savingsRange,
+      commonJobs: LOCAL_RECOMMENDATION_TEMPLATES.jobTypes[0],
+      estimatedMonthlyCost: state.costLevel,
+    };
+    state.heuristicProfile = {
+      ...profile,
+      realityTier: profile.tier,
+      sourceBasis: REALITY_SOURCE_BASIS,
+    };
+    state.userSignalPlaceholders = {
+      submittedWages: null,
+      submittedRent: null,
+      employerReviews: null,
+      cityTips: null,
+    };
+    state.score = profile.score;
+  });
+}
+
 const RANKINGS = {
   savings: { label: "Best states for saving", metric: (code) => averageFromRange(stateData[code].savingsRange), suffix: "avg savings" },
   rent: { label: "Best states for low rent", metric: (code) => -averageFromRange(stateData[code].rentRange), display: (code) => moneyWhole(averageFromRange(stateData[code].rentRange)), suffix: "avg rent" },
   tax: { label: "Best states for no/low income tax", metric: (code) => -estimateStateIncomeTaxRate(code), display: (code) => percent(estimateStateIncomeTaxRate(code)), suffix: "estimated state tax" },
-  score: { label: "Best overall WAT survival score", metric: (code) => stateData[code].score, suffix: "score" },
+  score: { label: "Best overall WAT reality fit", metric: (code) => calculateRealityScore(code, activeStudentType), suffix: "reality score" },
   type: { label: "Best for selected student type", metric: (code) => getStudentTypeMapScore(code), suffix: "type fit" },
 };
 
@@ -162,7 +394,7 @@ const MAP_LAYERS = {
   savings: { label: "Best savings", ranking: "savings", value: (code) => averageFromRange(stateData[code].savingsRange), high: 700, mid: 520 },
   rent: { label: "Lowest rent", ranking: "rent", value: (code) => -averageFromRange(stateData[code].rentRange), high: -700, mid: -1050 },
   tax: { label: "Lowest tax", ranking: "tax", value: (code) => -estimateStateIncomeTaxRate(code), high: -0.01, mid: -0.045 },
-  score: { label: "Best overall WAT survival score", ranking: "score", value: (code) => stateData[code].score, high: 72, mid: 60 },
+  score: { label: "Best WAT reality fit", ranking: "score", value: (code) => calculateRealityScore(code, activeStudentType), high: 72, mid: 60 },
   type: { label: "Best for selected student type", ranking: "type", value: (code) => getStudentTypeMapScore(code), high: 94, mid: 70 },
 };
 
@@ -225,6 +457,9 @@ const elements = {
   statePersonality: document.querySelector("#statePersonality"),
   stateVerdict: document.querySelector("#stateVerdict"),
   survivalScore: document.querySelector("#survivalScore"),
+  realityMeaning: document.querySelector("#realityMeaning"),
+  realityScore: document.querySelector("#realityScore"),
+  realityDecisionCard: document.querySelector("#realityDecisionCard"),
   scoreFill: document.querySelector("#scoreFill"),
   minWage: document.querySelector("#minWage"),
   avgWage: document.querySelector("#avgWage"),
@@ -234,6 +469,7 @@ const elements = {
   rentRange: document.querySelector("#rentRange"),
   savings: document.querySelector("#savings"),
   scoreFactors: document.querySelector("#scoreFactors"),
+  sourceBasis: document.querySelector("#sourceBasis"),
   quickWage: document.querySelector("#quickWage"),
   quickTax: document.querySelector("#quickTax"),
   quickScore: document.querySelector("#quickScore"),
@@ -767,7 +1003,7 @@ function getStudentTypeMapScore(code) {
   const tax = estimateStateIncomeTaxRate(code);
   const wage = averageFromRange(state.averageWage);
   if (activeStudentType === "saver") return savings / 10 + (tax === 0 ? 18 : 0) + Math.max(0, 18 - rent / 80);
-  if (activeStudentType === "traveler") return state.score + (["CA", "FL", "NY", "NV", "WA", "CO", "MA", "IL"].includes(code) ? 16 : 0);
+  if (activeStudentType === "traveler") return calculateRealityScore(code, activeStudentType) + (["CA", "FL", "NY", "NV", "WA", "CO", "MA", "IL"].includes(code) ? 16 : 0);
   if (activeStudentType === "survivor") return 95 - rent / 22 - tax * 160 + (["Low", "Medium"].includes(state.costLevel) ? 18 : 0);
   return wage * 2.2 + (state.minimumWage >= 15 ? 18 : 0) + savings / 18;
 }
@@ -1719,12 +1955,13 @@ function setLoadingMessage(message) {
 
 function showTip(event, code) {
   const state = stateData[code];
+  const profile = buildRealityProfile(code, activeStudentType);
   const bounds = event.currentTarget.ownerSVGElement.getBoundingClientRect();
   elements.mapTip.textContent = "";
   const title = document.createElement("strong");
   const meta = document.createElement("span");
   title.textContent = state.name;
-  meta.textContent = `${money(state.minimumWage)} minimum wage | ${state.score}/100`;
+  meta.textContent = `${money(state.minimumWage)} minimum wage | ${profile.tier} · ${profile.score}/100`;
   elements.mapTip.append(title, document.createElement("br"), meta);
   elements.mapTip.classList.add("visible");
   elements.mapTip.style.left = `${event.clientX - bounds.left + 14}px`;
@@ -1827,25 +2064,104 @@ function renderScoreFactors(factors) {
   );
 }
 
+function renderRealityDecision(profile) {
+  if (!elements.realityDecisionCard) return;
+  const block = document.createElement("div");
+  block.className = "reality-decision-grid";
+  const groups = [
+    ["Reality check", profile.realityCheck],
+    ["Best for", profile.bestFor.join(", ")],
+    ["Dangerous for", profile.dangerousFor.join(", ")],
+    ["Biggest risk", profile.biggestRisk],
+    ["First thing to verify", profile.verifyFirst],
+  ];
+  block.replaceChildren(
+    ...groups.map(([label, value]) => {
+      const item = document.createElement("article");
+      item.innerHTML = `<span></span><strong></strong>`;
+      item.querySelector("span").textContent = label;
+      item.querySelector("strong").textContent = value;
+      return item;
+    }),
+  );
+
+  const checklist = document.createElement("details");
+  checklist.className = "verify-checklist";
+  checklist.open = true;
+  const summary = document.createElement("summary");
+  summary.textContent = "Verify before accepting";
+  const list = document.createElement("ul");
+  list.replaceChildren(
+    ...profile.verifyChecklist.map((item) => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      return li;
+    }),
+  );
+  checklist.append(summary, list);
+  elements.realityDecisionCard.replaceChildren(block, checklist);
+}
+
+function renderSourceBasis(state, profile) {
+  if (!elements.sourceBasis) return;
+  const confidence = document.createElement("p");
+  confidence.className = "confidence-line";
+  confidence.innerHTML = `<strong></strong><span></span>`;
+  confidence.querySelector("strong").textContent = `Confidence: ${profile.confidence.level}`;
+  confidence.querySelector("span").textContent = profile.confidence.reason;
+
+  const sourceList = document.createElement("ul");
+  const items = [
+    `Minimum wage: ${state.publicData.sourceNotes.minimumWage}`,
+    `Tax: ${state.publicData.sourceNotes.incomeTax}`,
+    `WAT wage estimate: ${profile.sourceBasis.wageEstimate}`,
+    `Rent: ${profile.sourceBasis.rentRange}`,
+    `Reality tier: ${profile.sourceBasis.score}`,
+  ];
+  sourceList.replaceChildren(...items.map((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    return li;
+  }));
+
+  const future = document.createElement("p");
+  future.className = "future-data-note";
+  future.textContent = profile.futureUserData;
+
+  elements.sourceBasis.replaceChildren(confidence, sourceList, future);
+}
+
+function renderRealityFactors(profile) {
+  const whyTitle = document.createElement("p");
+  whyTitle.textContent = `Why this is ${profile.tier}:`;
+  const whyList = document.createElement("ul");
+  whyList.replaceChildren(
+    ...profile.why.map((reason) => {
+      const item = document.createElement("li");
+      item.textContent = reason;
+      return item;
+    }),
+  );
+  const warning = document.createElement("p");
+  warning.className = "state-warning";
+  warning.textContent = profile.warning;
+  elements.scoreFactors.replaceChildren(whyTitle, whyList, warning);
+}
+
 function buildLocalRecommendations(code) {
   const state = stateData[code];
   const rent = averageFromRange(state.rentRange);
   const savings = averageFromRange(state.savingsRange);
-  const mainInsight = state.costLevel.includes("High")
-    ? "Employer housing decides your whole summer here."
-    : savings >= 700
-      ? "This state can quietly protect your savings if hours stay steady."
-      : "Low costs help, but weak hours can still break the plan.";
-  const mainInsightCopy = rent >= 1200
-    ? "Treat rent as the boss fight. A good placement with bad housing can still lose money."
-    : "The money math is more forgiving here, but verify transport and weekly hours before committing.";
+  const profile = buildRealityProfile(code, activeStudentType);
+  const mainInsight = profile.biggestRisk;
+  const mainInsightCopy = `${profile.realityCheck} ${profile.confidence.reason}`;
   const entries = [
-    ["Money", `${state.savingsRange} possible monthly money left. Track rent first, fun spending second.`],
-    ["Housing", state.costLevel.includes("High") ? "Secure housing before accepting the job. High-cost states can destroy savings fast." : LOCAL_RECOMMENDATION_TEMPLATES.housing[0]],
-    ["Transport", state.costLevel === "Very high" ? "Transit can be useful near major cities, but rent near stations may cost more." : LOCAL_RECOMMENDATION_TEMPLATES.transport[0]],
+    ["Money", averageFromRange(state.averageWage) < 21 ? "Low wage pressure means overtime or a second job matters more than normal." : `${state.savingsRange} likely monthly range if housing and hours behave.`],
+    ["Housing", state.estimatedWatData.housingVolatility >= 60 ? "Employer housing is the first decision. Private rent can turn this state fragile fast." : LOCAL_RECOMMENDATION_TEMPLATES.housing[0]],
+    ["Transport", state.estimatedWatData.travelAccess < 55 ? "Confirm shuttle, carpool, or bus access before accepting. A cheap room far from work is not cheap." : "Travel access is useful, but do not book weekend trips before hours stabilize."],
     ["Safety", LOCAL_RECOMMENDATION_TEMPLATES.safety[0]],
-    ["Food", LOCAL_RECOMMENDATION_TEMPLATES.cheapGroceries[0]],
-    ["Work", LOCAL_RECOMMENDATION_TEMPLATES.jobTypes[0]],
+    ["Food", state.costLevel.includes("High") ? "Groceries and eating out need a weekly cap here. Resort pricing can quietly drain the margin." : LOCAL_RECOMMENDATION_TEMPLATES.cheapGroceries[0]],
+    ["Work", averageFromRange(state.averageWage) < 21 ? "Screen for guaranteed hours, tips, overtime, and whether second-job scheduling is realistic." : LOCAL_RECOMMENDATION_TEMPLATES.jobTypes[0]],
   ];
   return { state, mainInsight, mainInsightCopy, entries };
 }
@@ -1887,6 +2203,9 @@ function selectState(code, options = {}) {
   appState.simulatorInputs = { ...appState.simulatorInputs, stateCode: code };
   appState.routePlannerInputs = { ...appState.routePlannerInputs, currentState: code };
   const state = stateData[code];
+  const realityProfile = buildRealityProfile(code, activeStudentType);
+  state.score = realityProfile.score;
+  state.heuristicProfile = { ...state.heuristicProfile, ...realityProfile, realityTier: realityProfile.tier };
   document.querySelector(".state-panel")?.classList.remove("panel-pulse");
   requestAnimationFrame(() => document.querySelector(".state-panel")?.classList.add("panel-pulse"));
   elements.stateName.textContent = state.name;
@@ -1895,10 +2214,12 @@ function selectState(code, options = {}) {
   const estimatedGross = calculateMonthlyIncome(currentInput.hourlyWage || state.minimumWage, currentInput.hoursPerWeek || 38, currentInput.secondJobWage || 0, currentInput.secondJobHours || 0);
   const rentPressure = Number(currentInput.monthlyRent || averageFromRange(state.rentRange)) / Math.max(estimatedGross, 1);
   elements.stateVerdict.textContent = rentPressure > 0.35
-    ? `${state.verdict} Housing pressure is high in your current setup.`
-    : state.verdict;
-  elements.survivalScore.textContent = state.score;
-  elements.scoreFill.style.width = `${state.score}%`;
+    ? `${realityProfile.meaning} Housing pressure is high in your current setup.`
+    : realityProfile.meaning;
+  elements.survivalScore.textContent = realityProfile.tier;
+  if (elements.realityMeaning) elements.realityMeaning.textContent = realityProfile.meaning;
+  if (elements.realityScore) elements.realityScore.textContent = `Score: ${realityProfile.score}/100`;
+  elements.scoreFill.style.width = `${realityProfile.score}%`;
   elements.minWage.textContent = money(state.minimumWage);
   elements.avgWage.textContent = state.averageWage;
   elements.incomeTax.textContent = state.incomeTax;
@@ -1908,8 +2229,10 @@ function selectState(code, options = {}) {
   elements.savings.textContent = state.savingsRange;
   elements.quickWage.textContent = money(state.minimumWage);
   elements.quickTax.textContent = state.incomeTax.includes("No") ? "No income tax" : `${state.incomeTax} tax`;
-  elements.quickScore.textContent = `${state.score}/100`;
-  renderScoreFactors(state.scoreFactors);
+  elements.quickScore.textContent = realityProfile.tier;
+  renderRealityDecision(realityProfile);
+  renderRealityFactors(realityProfile);
+  renderSourceBasis(state, realityProfile);
   renderLocalRecommendations(code);
   updateActiveControls(code);
   if (elements.calcState.value !== code) elements.calcState.value = code;
@@ -2038,7 +2361,7 @@ function renderComparison() {
   const bestSavings = selectedCompareStates.reduce((best, code) => (
     averageFromRange(stateData[code].savingsRange) > averageFromRange(stateData[best].savingsRange) ? code : best
   ), selectedCompareStates[0]);
-  const bestScore = selectedCompareStates.reduce((best, code) => stateData[code].score > stateData[best].score ? code : best, selectedCompareStates[0]);
+  const bestScore = selectedCompareStates.reduce((best, code) => calculateRealityScore(code, activeStudentType) > calculateRealityScore(best, activeStudentType) ? code : best, selectedCompareStates[0]);
   const lowestRent = selectedCompareStates.reduce((best, code) => (
     averageFromRange(stateData[code].rentRange) < averageFromRange(stateData[best].rentRange) ? code : best
   ), selectedCompareStates[0]);
@@ -2053,6 +2376,7 @@ function renderComparison() {
   elements.comparisonBody.replaceChildren(
     ...selectedCompareStates.map((code) => {
       const state = stateData[code];
+      const profile = buildRealityProfile(code, activeStudentType);
       const row = document.createElement("tr");
       row.className = code === bestSavings ? "best-savings" : "";
       row.innerHTML = `
@@ -2061,7 +2385,7 @@ function renderComparison() {
         <td class="${code === lowestTax ? "best-cell" : ""}">${state.incomeTax}</td>
         <td class="${code === lowestRent ? "best-cell" : ""}">${state.rentRange}</td>
         <td>${state.savingsRange}${code === bestSavings ? " · best" : ""}</td>
-        <td class="${code === bestScore ? "best-cell" : ""}">${state.score}/100</td>
+        <td class="${code === bestScore ? "best-cell" : ""}">${profile.tier} · ${profile.score}/100</td>
       `;
       return row;
     }),
@@ -2092,7 +2416,8 @@ function renderRankings() {
   elements.rankingGrid.replaceChildren(
     ...rankStates(activeRanking).map((code, index) => {
       const state = stateData[code];
-      const value = ranking.display ? ranking.display(code) : activeRanking === "score" ? state.score : activeRanking === "type" ? Math.round(ranking.metric(code)) : moneyWhole(ranking.metric(code));
+      const profile = buildRealityProfile(code, activeStudentType);
+      const value = ranking.display ? ranking.display(code) : activeRanking === "score" ? profile.tier : activeRanking === "type" ? Math.round(ranking.metric(code)) : moneyWhole(ranking.metric(code));
       const card = document.createElement("article");
       card.className = "ranking-card";
       card.classList.toggle("student-match", recommended.has(code));
@@ -2100,7 +2425,7 @@ function renderRankings() {
         <span>${String(index + 1).padStart(2, "0")}</span>
         <button type="button">${state.name}</button>
         <strong>${value}</strong>
-        <span>${ranking.suffix}</span>
+        <span>${activeRanking === "score" ? `${profile.score}/100 · ${ranking.suffix}` : ranking.suffix}</span>
       `;
       card.querySelector("button").addEventListener("click", () => selectState(code));
       return card;
@@ -3264,7 +3589,8 @@ async function drawMap() {
     .attr("aria-pressed", "false")
     .attr("aria-label", (feature) => {
       const state = stateData[feature.code];
-      return `${state.name}: WAT score ${state.score} out of 100`;
+      const profile = buildRealityProfile(feature.code, activeStudentType);
+      return `${state.name}: ${profile.tier} reality tier, ${profile.score} out of 100`;
     })
     .on("mouseenter", (event, feature) => {
       selectState(feature.code);

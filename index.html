@@ -33,7 +33,7 @@
         <div class="hero-metrics" aria-label="Selected state quick summary">
           <article><span>Minimum wage</span><strong id="quickWage">$0/hr</strong></article>
           <article><span>Tax read</span><strong id="quickTax">Tax loading</strong></article>
-          <article><span>WAT score</span><strong id="quickScore">0/100</strong></article>
+          <article><span>Reality tier</span><strong id="quickScore">Loading</strong></article>
         </div>
       </section>
 
@@ -63,7 +63,7 @@
         </div>
 
         <div class="map-layer-tabs" id="mapLayerTabs" aria-label="Map layers"></div>
-        <p class="map-legend-label" id="mapLegendLabel">Best overall WAT survival score</p>
+        <p class="map-legend-label" id="mapLegendLabel">Best overall WAT reality fit</p>
 
         <div class="map-and-panel">
           <div class="map-wrap">
@@ -79,14 +79,17 @@
             <h3 id="stateName">New Jersey</h3>
             <p class="state-personality" id="statePersonality">Strong wage zone, painful housing zone.</p>
             <p id="stateVerdict">Good earning potential, but rent is painful.</p>
-            <div class="score-card">
-              <span>WAT Survival Score</span>
-              <strong id="survivalScore">72</strong>
+            <div class="score-card reality-card">
+              <span>Reality tier</span>
+              <strong id="survivalScore">Balanced</strong>
+              <p id="realityMeaning">Can save and travel if rent stays reasonable.</p>
+              <small id="realityScore">Score: 72/100</small>
               <div class="score-track"><div id="scoreFill"></div></div>
             </div>
+            <div class="reality-decision-card" id="realityDecisionCard"></div>
             <dl class="detail-list">
               <div><dt>Minimum wage</dt><dd id="minWage">$0/hr</dd></div>
-              <div><dt>Average wage</dt><dd id="avgWage">$0/hr</dd></div>
+              <div><dt>Typical WAT job wage estimate</dt><dd id="avgWage">$0/hr</dd></div>
               <div><dt>State income tax</dt><dd id="incomeTax">Loading</dd></div>
               <div><dt>Sales tax</dt><dd id="salesTax">Loading</dd></div>
               <div><dt>Cost of living</dt><dd id="costLevel">Loading</dd></div>
@@ -94,6 +97,10 @@
               <div><dt>Possible monthly money left</dt><dd id="savings">$0</dd></div>
             </dl>
             <div class="score-factors" id="scoreFactors"></div>
+            <details class="source-basis-card">
+              <summary>Source basis and confidence</summary>
+              <div id="sourceBasis"></div>
+            </details>
           </aside>
         </div>
       </section>
@@ -212,7 +219,7 @@
         <p class="inline-notice" id="comparisonNotice">Choose 2-3 states to compare.</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>State</th><th>Wage</th><th>Tax</th><th>Rent</th><th>Savings</th><th>Score</th></tr></thead>
+            <thead><tr><th>State</th><th>WAT wage est.</th><th>Tax</th><th>Rent</th><th>Likely range</th><th>Reality tier</th></tr></thead>
             <tbody id="comparisonBody"></tbody>
           </table>
         </div>

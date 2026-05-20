@@ -1,7 +1,10 @@
 window.WAT_STATE_DATA = {
   lastUpdated: "2026-05-19",
   sources: {
-    minimumWage: "https://www.paycor.com/resource-center/articles/minimum-wage-by-state/",
+    minimumWage: "https://www.dol.gov/agencies/whd/minimum-wage/state",
+    federalTax: "https://www.irs.gov/newsroom/irs-releases-tax-inflation-adjustments-for-tax-year-2026",
+    occupationalWages: "https://www.bls.gov/oes/",
+    livingCostBenchmark: "https://livingwage.mit.edu/",
     incomeTax: "https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/",
     salesTax: "https://taxfoundation.org/data/all/state/sales-tax-rates/",
   },

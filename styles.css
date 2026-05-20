@@ -744,6 +744,143 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-variant-numeric: tabular-nums;
 }
 
+.reality-card {
+  gap: 10px;
+}
+
+.reality-card strong {
+  max-width: 100%;
+  font-size: clamp(2.4rem, 5.2vw, 4.4rem);
+  letter-spacing: -0.055em;
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+
+.reality-card p {
+  max-width: 42rem;
+  margin: 0;
+  color: rgba(245, 240, 231, 0.72);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.reality-card small {
+  color: rgba(245, 240, 231, 0.62);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reality-decision-card {
+  display: grid;
+  gap: 14px;
+}
+
+.reality-decision-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.reality-decision-grid article,
+.verify-checklist,
+.source-basis-card {
+  border: 1px solid var(--line-dark);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(23, 26, 21, 0.03);
+}
+
+.reality-decision-grid span,
+.verify-checklist summary,
+.source-basis-card summary {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.reality-decision-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.verify-checklist summary,
+.source-basis-card summary {
+  cursor: pointer;
+}
+
+.verify-checklist ul,
+.source-basis-card ul,
+.score-factors ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--ink-soft);
+  font-weight: 550;
+  line-height: 1.45;
+}
+
+.source-basis-card {
+  color: var(--ink-soft);
+}
+
+.source-basis-card p {
+  margin: 12px 0 0;
+  line-height: 1.45;
+}
+
+.confidence-line {
+  display: grid;
+  gap: 4px;
+}
+
+.confidence-line strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+}
+
+.future-data-note {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.score-factors {
+  display: grid;
+  gap: 10px;
+}
+
+.score-factors p {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.score-factors .state-warning {
+  border-left: 3px solid var(--amber);
+  padding-left: 12px;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
 .score-track,
 .stress-track {
   overflow: hidden;
