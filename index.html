@@ -153,7 +153,7 @@
               </select></label>
               <label>Next payday<input id="nextPayday" type="date" /></label>
             </div>
-            <button class="secondary-action" id="resetDemoButton" type="button">Reset demo data</button>
+            <button class="secondary-action" id="resetDemoButton" type="button">Reset local data</button>
           </form>
 
           <form class="daily-log-form" id="dailyLogForm">
@@ -206,7 +206,7 @@
               <label>Add memo<input id="memoryMemoText" type="text" placeholder="First NYC trip, double shift, payday..." /></label>
               <button class="secondary-action" type="submit">Save memo</button>
             </form>
-            <button class="secondary-action" id="clearLogsButton" type="button">Clear demo logs</button>
+            <button class="secondary-action" id="clearLogsButton" type="button">Clear local logs</button>
           </article>
         </div>
       </section>
@@ -227,15 +227,16 @@
 
       <section class="rankings-section" aria-label="Rankings">
         <header class="section-head compact">
-          <div><p class="eyebrow">Rankings</p><h2>Best states depend on the game you are playing.</h2></div>
+          <div><p class="eyebrow">Rankings</p><h2>Fit rankings depend on the strategy you are testing.</h2></div>
         </header>
+        <p class="inline-notice" id="rankingBasis">Ranking basis will appear here.</p>
         <div class="ranking-tabs" id="rankingTabs"></div>
         <div class="ranking-grid" id="rankingGrid"></div>
       </section>
 
-      <section class="community-insights-section" aria-label="Curated WAT insights">
+      <section class="community-insights-section" aria-label="Heuristic WAT signals">
         <header class="section-head compact">
-          <div><p class="eyebrow">Field notes</p><h2>Curated WAT insight — demo data.</h2></div>
+          <div><p class="eyebrow">Model notes</p><h2>Heuristic signals the system is watching.</h2></div>
         </header>
         <div class="community-insights" id="communityInsights"></div>
       </section>
@@ -307,6 +308,10 @@
                 <div><dt>Total before travel</dt><dd id="totalBeforeTravel">$0</dd></div>
                 <div><dt>Travel deduction</dt><dd id="travelDeduction">$0</dd></div>
               </dl>
+            </details>
+            <details class="source-basis-card simulator-assumptions-card">
+              <summary>Assumptions and data basis</summary>
+              <div id="simulatorAssumptions"></div>
             </details>
           </div>
         </div>
@@ -459,16 +464,21 @@
         </div>
       </section>
 
-      <section class="local-section" aria-label="Local recommendations">
+      <section class="local-section" aria-label="Local reality signals">
         <header class="section-head compact">
-          <div><p class="eyebrow">Student survival guide</p><h2 id="localStateName">New Jersey</h2></div>
+          <div><p class="eyebrow">Placement risk signals</p><h2 id="localStateName">New Jersey</h2></div>
         </header>
         <article class="local-main-insight">
-          <span>Curated demo guidance — replace with city/employer-specific research later.</span>
+          <span>Heuristic model · verify locally before accepting</span>
           <strong id="localMainInsight">Employer housing decides your whole summer here.</strong>
-          <p id="localMainInsightCopy">Use this as a planning prompt, not final advice.</p>
+          <p id="localMainInsightCopy">Signals use public references, local estimates, user inputs, and transparent heuristics. They are not live employer data.</p>
         </article>
         <div class="local-grid" id="localRecommendations"></div>
+      </section>
+
+      <section class="data-transparency-section" aria-label="Data transparency">
+        <p class="eyebrow">Data transparency</p>
+        <p>This app combines public wage/tax/cost references, user inputs, and WAT-specific heuristic estimates. Housing, actual hours, tips, city taxes, employer conditions, and travel prices vary. Route/Places data is prepared for API integration but is not live yet.</p>
       </section>
     </main>
 

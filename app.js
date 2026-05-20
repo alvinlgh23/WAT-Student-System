@@ -2,15 +2,16 @@ const dataSet = window.WAT_STATE_DATA;
 const stateData = dataSet.states;
 const fipsToCode = dataSet.fipsToCode;
 const stateEntries = Object.entries(stateData).sort(([, a], [, b]) => a.name.localeCompare(b.name));
+const dataSourceRegistry = dataSet.dataSourceRegistry || {};
 
 const REALITY_SOURCE_BASIS = {
-  minimumWage: "Public reference data: state minimum wage law, checked against U.S. Department of Labor-style wage tables.",
-  federalTax: "Public reference data: IRS federal tax bracket assumptions used by the simulator.",
-  stateTax: "Public reference data: state income-tax range estimate.",
-  wageEstimate: "Estimated WAT assumption: common hourly job offers, tips, overtime, and employer quality can move this materially.",
-  livingCost: "Estimated benchmark: living-cost pressure calibrated from public cost benchmarks such as MIT Living Wage style data.",
-  rentRange: "Estimated WAT assumption: rent is a placeholder range until city, employer, housing deposit, and roommate data are added.",
-  score: "Heuristic interpretation: combines wage, rent, tax, costs, job density, travel access, volatility, and selected student strategy.",
+  minimumWage: `${dataSourceRegistry.minimumWage?.status || "public reference"}: ${dataSourceRegistry.minimumWage?.source || "state labor departments"}.`,
+  federalTax: `${dataSourceRegistry.federalTax?.status || "public reference + simplified model"}: ${dataSourceRegistry.federalTax?.source || "IRS tax brackets / simplified withholding estimate"}. Not tax advice.`,
+  stateTax: `${dataSourceRegistry.stateTax?.status || "public reference"}: ${dataSourceRegistry.stateTax?.source || "state income-tax reference"}.`,
+  wageEstimate: "Transparent heuristic estimate: WAT job wage range is not a state average and must be verified against the actual employer offer.",
+  livingCost: `${dataSourceRegistry.livingCost?.status || "public benchmark + estimate"}: ${dataSourceRegistry.livingCost?.source || "MIT Living Wage / BLS CPI"}.`,
+  rentRange: `${dataSourceRegistry.rent?.status || "estimate"}: ${dataSourceRegistry.rent?.source || "HUD FMR / local rent estimate / future student reports"}.`,
+  score: "Heuristic interpretation: combines wage, rent, tax, costs, job-market estimate, travel access, volatility, and selected student strategy.",
 };
 
 const VERIFY_BEFORE_ACCEPTING = [
@@ -32,19 +33,7 @@ const REALITY_TIER_DEFINITIONS = [
   { min: 0, label: "Trap setup", meaning: "High risk of returning with little or negative savings unless conditions improve." },
 ];
 
-// Placeholder demo data: replace with city-level research, sponsor/employer inputs, and student reviews later.
-const LOCAL_RECOMMENDATION_TEMPLATES = {
-  cheapGroceries: ["Walmart, Aldi, Trader Joe's, and local Asian groceries are usually the first price checks.", "Use weekly flyers before buying bulk. Small resort towns often charge more."],
-  transport: ["Check if employer housing includes shuttle service before paying for a carpool.", "In spread-out states, budget extra for rideshares or shared rentals."],
-  phonePlans: ["Mint Mobile, Visible, T-Mobile prepaid, and AT&T prepaid are common student picks.", "Confirm coverage around housing and work location, not only the nearest city."],
-  safety: ["Avoid isolated late-night walks after shifts. Share housing and commute details with friends.", "Keep passport, DS-2019, and emergency contacts backed up digitally."],
-  jobTypes: ["Hospitality, food service, lifeguard, amusement park, retail, resort, and housekeeping roles are common.", "Ask about overtime rules, uniform cost, tips, and average weekly hours."],
-  housing: ["Prioritize employer-arranged housing or verified student groups before private listings.", "Calculate rent weekly and monthly; some offers look cheaper until deposits and utilities appear."],
-  nearbyTravel: ["Build short weekend trips first, then save the big route for after the work period.", "Use buses and trains when possible; flights can erase savings quickly."],
-  survivalTips: ["Track spending weekly, keep one emergency fund, and avoid buying travel tickets before your hours stabilize.", "If hours drop for two weeks, cut travel budget before touching food or rent money."],
-};
-
-// Placeholder route ideas for demo use. A production version should use real city, transport, and accommodation data.
+// Heuristic route sets. A production version should replace this with Google Routes/Places and lodging APIs.
 const TRAVEL_ROUTE_SETS = {
   Northeast: ["New York City", "Boston", "Washington, DC", "Philadelphia"],
   Southeast: ["Orlando", "Miami", "Savannah", "New Orleans"],
@@ -176,7 +165,7 @@ const STATE_PERSONALITIES = {
   TX: "No income tax, but city choice decides the game.",
   CA: "Big earnings, bigger rent pressure.",
   NY: "Iconic summer, brutal city math.",
-  NV: "Hospitality upside with no income-tax drag.",
+  NV: "Service-market upside with no income-tax drag.",
   DE: "Tiny state, surprisingly clean savings math.",
   WA: "High wages, high rent, serious planning required.",
 };
@@ -359,13 +348,55 @@ function enrichStateData() {
     };
     state.estimatedWatData = {
       expectedWatWageRange: state.averageWage,
+      expectedHoursRange: "30-45 hours/week estimate until employer schedule is known",
       rentRange: state.rentRange,
       jobMarket: getJobMarketScore(state),
       housingVolatility: getHousingVolatilityScore(state),
+      transportDependency: getTravelAccessScore(code) < 55 ? "High" : "Route/city dependent",
       travelAccess: getTravelAccessScore(code),
       typicalSavingsRange: state.savingsRange,
-      commonJobs: LOCAL_RECOMMENDATION_TEMPLATES.jobTypes[0],
       estimatedMonthlyCost: state.costLevel,
+    };
+    const avgIncome = averageFromRange(state.averageWage) * 38 * 4.33;
+    state.verifiedPublicData = {
+      minimumWage: state.minimumWage,
+      incomeTaxRange: state.incomeTax,
+      salesTax: state.salesTax,
+      cpiRegion: REGION_BY_STATE[code] || "Regional estimate",
+      livingCostBenchmark: state.costLevel,
+      fairMarketRentEstimate: state.rentRange,
+    };
+    state.estimatedWatAssumptions = {
+      typicalWatWageRange: state.averageWage,
+      expectedHoursRange: state.estimatedWatData.expectedHoursRange,
+      housingVolatility: state.estimatedWatData.housingVolatility,
+      transportDependency: state.estimatedWatData.transportDependency,
+      travelAccess: state.estimatedWatData.travelAccess,
+      savingsPotential: state.savingsRange,
+    };
+    state.heuristicSignals = {
+      rentBurden: averageFromRange(state.rentRange) / Math.max(avgIncome, 1),
+      taxDrag: estimateStateIncomeTaxRate(code),
+      wageFloorStrength: clamp((state.minimumWage - 7.25) / 9 * 100, 0, 100),
+      costPressure: getCostPressureScore(state.costLevel),
+      travelTemptation: getTravelAccessScore(code),
+      routeFragility: clamp(getHousingVolatilityScore(state) * 0.45 + getTravelAccessScore(code) * 0.18, 0, 100),
+      burnoutRisk: averageFromRange(state.averageWage) < 21 ? 62 : 42,
+    };
+    state.dataConfidence = {
+      overall: profile.confidence.level,
+      wage: dataSourceRegistry.minimumWage?.confidence || "high",
+      tax: "medium",
+      rent: dataSourceRegistry.rent?.confidence || "medium-low",
+      travel: "low until connected",
+      watAssumptions: "medium-low",
+    };
+    state.verifyBeforeAccepting = ["Employer housing cost", "Guaranteed weekly hours", "Transport/shuttle access", "Meal benefit", "Overtime availability"];
+    state.futureStudentData = {
+      reportedRent: null,
+      reportedHours: null,
+      employerReviews: null,
+      cityTips: null,
     };
     state.heuristicProfile = {
       ...profile,
@@ -383,11 +414,11 @@ function enrichStateData() {
 }
 
 const RANKINGS = {
-  savings: { label: "Best states for saving", metric: (code) => averageFromRange(stateData[code].savingsRange), suffix: "avg savings" },
-  rent: { label: "Best states for low rent", metric: (code) => -averageFromRange(stateData[code].rentRange), display: (code) => moneyWhole(averageFromRange(stateData[code].rentRange)), suffix: "avg rent" },
-  tax: { label: "Best states for no/low income tax", metric: (code) => -estimateStateIncomeTaxRate(code), display: (code) => percent(estimateStateIncomeTaxRate(code)), suffix: "estimated state tax" },
-  score: { label: "Best overall WAT reality fit", metric: (code) => calculateRealityScore(code, activeStudentType), suffix: "reality score" },
-  type: { label: "Best for selected student type", metric: (code) => getStudentTypeMapScore(code), suffix: "type fit" },
+  savings: { label: "Savings fit", metric: (code) => averageFromRange(stateData[code].savingsRange), suffix: "estimated range", basis: "Estimated from WAT wage range, rent burden, tax drag, and basic spending assumptions." },
+  rent: { label: "Lowest rent burden", metric: (code) => -averageFromRange(stateData[code].rentRange), display: (code) => moneyWhole(averageFromRange(stateData[code].rentRange)), suffix: "housing estimate", basis: "Based on housing cost estimate / HUD FMR-ready field. Verify employer housing before accepting." },
+  tax: { label: "Lowest tax drag", metric: (code) => -estimateStateIncomeTaxRate(code), display: (code) => percent(estimateStateIncomeTaxRate(code)), suffix: "estimated state tax", basis: "Based on state income tax drag plus simplified tax assumptions. Not tax advice." },
+  score: { label: "Overall reality fit", metric: (code) => calculateRealityScore(code, activeStudentType), suffix: "reality score", basis: "Weighted model: wage, rent, tax, cost pressure, travel access, volatility, and confidence." },
+  type: { label: "Selected strategy fit", metric: (code) => getStudentTypeMapScore(code), suffix: "type fit", basis: "Weighting changes based on selected WAT strategy. This is a heuristic model, not a verified placement ranking." },
 };
 
 const MAP_LAYERS = {
@@ -477,6 +508,7 @@ const elements = {
   comparisonNotice: document.querySelector("#comparisonNotice"),
   comparisonBody: document.querySelector("#comparisonBody"),
   rankingTabs: document.querySelector("#rankingTabs"),
+  rankingBasis: document.querySelector("#rankingBasis"),
   rankingGrid: document.querySelector("#rankingGrid"),
   calcState: document.querySelector("#calcState"),
   scenarioButtons: document.querySelector("#scenarioButtons"),
@@ -554,6 +586,7 @@ const elements = {
   timelineSummary: document.querySelector("#timelineSummary"),
   savingsTimeline: document.querySelector("#savingsTimeline"),
   moneyUseCards: document.querySelector("#moneyUseCards"),
+  simulatorAssumptions: document.querySelector("#simulatorAssumptions"),
   grossMonthly: document.querySelector("#grossMonthly"),
   taxDeduction: document.querySelector("#taxDeduction"),
   livingCost: document.querySelector("#livingCost"),
@@ -653,6 +686,19 @@ function moneyWhole(value) {
 
 function numberWhole(value) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(value || 0));
+}
+
+function formatPercent(value) {
+  return `${Math.round(Number(value || 0) * 100)}%`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function animateNumber(element, value, formatter = moneyWhole) {
@@ -908,7 +954,7 @@ function syncAppStateFromLive() {
 }
 
 function resetState() {
-  if (!window.confirm("Reset all local WAT demo data in this browser?")) return;
+  if (!window.confirm("Reset all local WAT data in this browser?")) return;
   localStorage.removeItem(APP_STORAGE_KEY);
   localStorage.removeItem(LIVE_STORAGE_KEY);
   appState = createDefaultAppState();
@@ -1025,7 +1071,7 @@ function estimateStateIncomeTaxRate(code) {
 
 function estimateTotalTaxRate(code) {
   // Important approximation: combines state income tax with a light federal/FICA placeholder.
-  // This is demo guidance, not payroll, treaty, or tax filing advice.
+  // This is a simplified planning estimate, not payroll, treaty, or tax filing advice.
   return Math.min(0.28, 0.12 + estimateStateIncomeTaxRate(code));
 }
 
@@ -2396,18 +2442,79 @@ function renderRealityFactors(profile) {
 
 function buildLocalRecommendations(code) {
   const state = stateData[code];
-  const rent = averageFromRange(state.rentRange);
-  const savings = averageFromRange(state.savingsRange);
   const profile = buildRealityProfile(code, activeStudentType);
+  const simulatorInput = appState?.simulatorInputs || {};
+  const hourlyWage = Number(simulatorInput.hourlyWage || averageFromRange(state.averageWage) || state.minimumWage);
+  const hoursPerWeek = Number(simulatorInput.hoursPerWeek || 38);
+  const monthlyIncome = calculateMonthlyIncome(
+    hourlyWage,
+    hoursPerWeek,
+    Number(simulatorInput.secondJobWage || 0),
+    Number(simulatorInput.secondJobHours || 0),
+  );
+  const rentEstimate = Number(simulatorInput.monthlyRent || averageFromRange(state.rentRange));
+  const rentBurden = rentEstimate / Math.max(monthlyIncome, 1);
+  const stateTaxRate = estimateStateIncomeTaxRate(code);
+  const wageFloorLevel = state.minimumWage >= 15 ? "Higher floor" : state.minimumWage <= 8 ? "Low floor" : "Moderate floor";
+  const housingLevel = rentBurden > 0.45 ? "High" : rentBurden > 0.32 ? "Medium" : "Lower";
+  const taxLevel = stateTaxRate === 0 ? "Low" : stateTaxRate > 0.06 ? "High" : "Medium";
+  const transportLevel = state.estimatedWatData.transportDependency || (state.estimatedWatData.travelAccess < 55 ? "High" : "City-dependent");
   const mainInsight = profile.biggestRisk;
-  const mainInsightCopy = `${profile.realityCheck} ${profile.confidence.reason}`;
+  const mainInsightCopy = `${profile.realityCheck} ${profile.confidence.reason} Future student wage, rent, employer, and city data will improve this estimate.`;
   const entries = [
-    ["Money", averageFromRange(state.averageWage) < 21 ? "Low wage pressure means overtime or a second job matters more than normal." : `${state.savingsRange} likely monthly range if housing and hours behave.`],
-    ["Housing", state.estimatedWatData.housingVolatility >= 60 ? "Employer housing is the first decision. Private rent can turn this state fragile fast." : LOCAL_RECOMMENDATION_TEMPLATES.housing[0]],
-    ["Transport", state.estimatedWatData.travelAccess < 55 ? "Confirm shuttle, carpool, or bus access before accepting. A cheap room far from work is not cheap." : "Travel access is useful, but do not book weekend trips before hours stabilize."],
-    ["Safety", LOCAL_RECOMMENDATION_TEMPLATES.safety[0]],
-    ["Food", state.costLevel.includes("High") ? "Groceries and eating out need a weekly cap here. Resort pricing can quietly drain the margin." : LOCAL_RECOMMENDATION_TEMPLATES.cheapGroceries[0]],
-    ["Work", averageFromRange(state.averageWage) < 21 ? "Screen for guaranteed hours, tips, overtime, and whether second-job scheduling is realistic." : LOCAL_RECOMMENDATION_TEMPLATES.jobTypes[0]],
+    {
+      category: "Estimated signal",
+      name: "Housing pressure",
+      level: housingLevel,
+      means: `Estimated rent absorbs ${formatPercent(rentBurden)} of monthly WAT income under current wage and hour inputs.`,
+      basis: `${dataSourceRegistry.rent?.label || "Housing cost estimate"}: ${dataSourceRegistry.rent?.source || "HUD FMR / rent estimate / future student reports"}. User rent input is used when present.`,
+      confidence: state.dataConfidence?.rent || dataSourceRegistry.rent?.confidence || "medium-low",
+      verify: "Employer housing cost, deposit, utilities, roommate count, and commute cost.",
+    },
+    {
+      category: "Public data",
+      name: "Wage floor",
+      level: wageFloorLevel,
+      means: state.minimumWage <= 8
+        ? "The state wage floor is low, so the actual employer offer and guaranteed hours matter more than the baseline."
+        : "The wage floor gives a stronger baseline, but actual savings still depend on the employer offer, tips, and hours.",
+      basis: `${dataSourceRegistry.minimumWage?.label || "State minimum wage"}: ${dataSourceRegistry.minimumWage?.source || "state labor departments"}.`,
+      confidence: dataSourceRegistry.minimumWage?.confidence || "high",
+      verify: "Written hourly wage, tip policy, overtime policy, and minimum scheduled hours.",
+    },
+    {
+      category: "Public data + model",
+      name: "Tax drag",
+      level: taxLevel,
+      means: stateTaxRate === 0
+        ? "State income tax drag is estimated near zero; federal withholding and filing rules still matter."
+        : `Estimated state income tax drag is about ${formatPercent(stateTaxRate)} before local and federal details.`,
+      basis: `${dataSourceRegistry.stateTax?.label || "State income tax"}: ${dataSourceRegistry.stateTax?.source || "state tax tables"}. Simplified model, not tax advice.`,
+      confidence: state.dataConfidence?.tax || "medium",
+      verify: "Federal withholding, state filing rules, local tax, and sponsor/treaty guidance.",
+    },
+    {
+      category: "Public benchmark + estimate",
+      name: "Cost pressure",
+      level: state.costLevel,
+      means: state.costLevel.includes("High")
+        ? "Non-rent spending can reduce the buffer, but housing remains the main volatility driver in this setup."
+        : "Cost pressure is not the main model risk unless user spending logs start trending upward.",
+      basis: `${dataSourceRegistry.livingCost?.label || "Living cost benchmark"}: ${dataSourceRegistry.livingCost?.source || "MIT Living Wage / BLS CPI"}.`,
+      confidence: dataSourceRegistry.livingCost?.confidence || "medium",
+      verify: "Food, transport, uniform costs, deposits, and city-specific prices.",
+    },
+    {
+      category: "Future data needed",
+      name: "Transport dependency",
+      level: transportLevel,
+      means: transportLevel === "High"
+        ? "Transport dependency can turn a cheap placement into an expensive one if paid rides become routine."
+        : "Transport risk depends on city layout, employer shuttle access, and late-shift return options.",
+      basis: `${dataSourceRegistry.routeDistance?.label || "Route distance/time"}: ${dataSourceRegistry.routeDistance?.source || "Google Routes API-ready"}. Not live yet.`,
+      confidence: dataSourceRegistry.routeDistance?.confidence || "low until connected",
+      verify: "Employer shuttle, bus route, commute time, carpool reliability, and late-night return method.",
+    },
   ];
   return { state, mainInsight, mainInsightCopy, entries };
 }
@@ -2418,10 +2525,17 @@ function renderLocalRecommendations(code) {
   elements.localMainInsightCopy.textContent = mainInsightCopy;
   elements.localStateName.textContent = state.name;
   elements.localRecommendations.replaceChildren(
-    ...entries.map(([title, body]) => {
+    ...entries.map((signal) => {
       const card = document.createElement("article");
       card.className = "local-card";
-      card.innerHTML = `<small>Demo guidance</small><strong>${title}</strong><span>${body}</span>`;
+      card.innerHTML = `
+        <small>${escapeHtml(signal.category)}</small>
+        <strong>${escapeHtml(signal.name)} · ${escapeHtml(signal.level)}</strong>
+        <span><b>Why it matters:</b> ${escapeHtml(signal.means)}</span>
+        <span><b>Data basis:</b> ${escapeHtml(signal.basis)}</span>
+        <span><b>Confidence:</b> ${escapeHtml(signal.confidence)}</span>
+        <span><b>Verify:</b> ${escapeHtml(signal.verify)}</span>
+      `;
       return card;
     }),
   );
@@ -2659,6 +2773,9 @@ function renderRankingTabs() {
 function renderRankings() {
   const ranking = RANKINGS[activeRanking];
   const recommended = new Set(getRecommendedStatesForStudentType());
+  if (elements.rankingBasis) {
+    elements.rankingBasis.textContent = `Basis: ${ranking.basis}`;
+  }
   elements.rankingGrid.replaceChildren(
     ...rankStates(activeRanking).map((code, index) => {
       const state = stateData[code];
@@ -2753,6 +2870,7 @@ function updateCalculator() {
   renderSavingsRange(input);
   renderSavingsTimeline(input, result);
   renderMoneyUseCards(result.finalSavings);
+  renderSimulatorAssumptions(input, result);
   selectState(input.stateCode, { persist: false, skipRecalculate: true });
   updateSummerDashboard();
   renderFinalOutcomeSummary();
@@ -2867,6 +2985,47 @@ function renderSavingsRange(input) {
   animateNumber(elements.likelyCaseSavings, range.likely);
   animateNumber(elements.bestCaseSavings, range.best);
   elements.savingsRangeInsight.textContent = getPlainSavingsExplanation(input, calculateSavings(input), range);
+}
+
+function renderSimulatorAssumptions(input, result) {
+  if (!elements.simulatorAssumptions) return;
+  const state = stateData[input.stateCode] || stateData[activeState];
+  const routeTotal = Number(appState.customRouteResult?.total || 0);
+  const assumptions = [
+    {
+      label: "Wage basis",
+      value: `User input ${money(input.hourlyWage)}. Compare against ${dataSourceRegistry.minimumWage?.label || "state minimum wage"} and the WAT wage estimate; actual offer depends on employer, city, tips, and overtime.`,
+    },
+    {
+      label: "Rent basis",
+      value: `User input ${moneyWhole(input.monthlyRent)}/month. Reference basis: ${dataSourceRegistry.rent?.source || "HUD FMR / local rent estimate / future student reports"}.`,
+    },
+    {
+      label: "Tax basis",
+      value: `${dataSourceRegistry.federalTax?.source || "IRS tax brackets / simplified withholding estimate"} plus state tax estimate. Simplified planning model, not tax advice.`,
+    },
+    {
+      label: "Cost basis",
+      value: `Food, transport, and other costs are user inputs. Benchmark basis: ${dataSourceRegistry.livingCost?.source || "MIT Living Wage / BLS CPI"}.`,
+    },
+    {
+      label: "Travel basis",
+      value: routeTotal > 0
+        ? `Route cost pressure uses the current route heuristic (${moneyWhole(routeTotal)}). This is not live travel pricing.`
+        : `Travel budget is user-provided. Route distance, attractions, and lodging are API-ready estimates, not live pricing.`,
+    },
+    {
+      label: "Confidence",
+      value: `${state.dataConfidence?.overall || "Medium"} overall. Housing, actual hours, tips, city taxes, employer rules, and travel prices must be verified locally.`,
+    },
+  ];
+  const list = document.createElement("ul");
+  list.replaceChildren(...assumptions.map((item) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${escapeHtml(item.label)}:</strong> ${escapeHtml(item.value)}`;
+    return li;
+  }));
+  elements.simulatorAssumptions.replaceChildren(list);
 }
 
 function renderSavingsTimeline(input, result) {
@@ -3143,7 +3302,7 @@ function buildDynamicMilestones(progress) {
       category: "survival",
       priority: 80,
       title: milestoneCopy([
-        "You survived the stretch where most students lose control.",
+        "You survived the stretch where the model expected control to weaken.",
         "The summer entered survival mode, but the route stayed alive.",
       ], milestoneSeed("survival", progress.currentWeek)),
       copy: "The margin is thin, but the plan has not fully collapsed.",
@@ -3447,10 +3606,22 @@ function updateStickySummerStatus(projection = buildSavingsProjection(), stress 
 
 function getCommunityStyleInsights() {
   return [
-    "Most students overspend during the first two weeks.",
-    "High-rent states punish weak budgeting fast.",
-    "Students who track spending weekly usually protect their travel fund better.",
-    "Housing is the real boss fight.",
+    {
+      label: "Heuristic model",
+      text: "Rent burden above 40% lowers savings confidence in the current model.",
+    },
+    {
+      label: "User-data signal",
+      text: "Repeated spending logs above weekly earnings weaken travel freedom.",
+    },
+    {
+      label: "API-ready travel signal",
+      text: "Route distance, travel time, and attraction density are estimated until Google Routes/Places are connected.",
+    },
+    {
+      label: "Future student data needed",
+      text: "Employer-specific housing, scheduled hours, and city reports are not available yet.",
+    },
   ];
 }
 
@@ -3459,7 +3630,7 @@ function renderCommunityStyleInsights() {
     ...getCommunityStyleInsights().map((insight) => {
       const card = document.createElement("article");
       card.className = "community-insight";
-      card.innerHTML = `<span>Curated WAT insight · demo data</span><strong>${insight}</strong>`;
+      card.innerHTML = `<span>${escapeHtml(insight.label)}</span><strong>${escapeHtml(insight.text)}</strong>`;
       return card;
     }),
   );
