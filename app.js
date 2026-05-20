@@ -573,6 +573,11 @@ const elements = {
   totalTripCost: document.querySelector("#totalTripCost"),
   recommendedStops: document.querySelector("#recommendedStops"),
   routePlannerNotice: document.querySelector("#routePlannerNotice"),
+  routeFeasibility: document.querySelector("#routeFeasibility"),
+  travelFreedomLevel: document.querySelector("#travelFreedomLevel"),
+  routeFragilityLevel: document.querySelector("#routeFragilityLevel"),
+  travelDataConfidence: document.querySelector("#travelDataConfidence"),
+  travelSourceBasis: document.querySelector("#travelSourceBasis"),
   optimizerStart: document.querySelector("#optimizerStart"),
   optimizerEnd: document.querySelector("#optimizerEnd"),
   optimizerDays: document.querySelector("#optimizerDays"),
@@ -597,7 +602,10 @@ const elements = {
   optimizerTotalCost: document.querySelector("#optimizerTotalCost"),
   routeIntensity: document.querySelector("#routeIntensity"),
   routeType: document.querySelector("#routeType"),
+  optimizerConfidence: document.querySelector("#optimizerConfidence"),
+  optimizerTravelFreedom: document.querySelector("#optimizerTravelFreedom"),
   routeTimeline: document.querySelector("#routeTimeline"),
+  optimizerEvidenceBasis: document.querySelector("#optimizerEvidenceBasis"),
   cheaperRoute: document.querySelector("#cheaperRoute"),
   fasterRoute: document.querySelector("#fasterRoute"),
   routeOptimizerNotice: document.querySelector("#routeOptimizerNotice"),
@@ -1608,6 +1616,209 @@ const INTEREST_ROUTE_STOPS = {
   nightlife: ["New York City", "Miami", "Las Vegas", "New Orleans"],
 };
 
+// Evidence simulation data: replace with Google Places/Routes, Trends, CPI, and lodging APIs when connected.
+const CITY_EVIDENCE_PROFILES = {
+  "new york city": { poi: 96, rating: 4.6, reviews: 980000, types: ["big cities", "food", "museums", "nightlife", "shopping"], cost: "very high", trend: "High global demand year-round", openingRisk: "Low" },
+  boston: { poi: 76, rating: 4.5, reviews: 310000, types: ["big cities", "museums", "food"], cost: "high", trend: "Strong student/history demand", openingRisk: "Low" },
+  "washington, dc": { poi: 82, rating: 4.6, reviews: 420000, types: ["museums", "big cities", "food"], cost: "medium-high", trend: "Museum-heavy demand; many free attractions", openingRisk: "Low" },
+  philadelphia: { poi: 64, rating: 4.4, reviews: 210000, types: ["food", "museums", "big cities"], cost: "medium", trend: "Good value East Coast add-on", openingRisk: "Medium" },
+  miami: { poi: 72, rating: 4.4, reviews: 390000, types: ["beaches", "nightlife", "food"], cost: "high", trend: "Seasonal beach/nightlife demand", openingRisk: "Medium" },
+  orlando: { poi: 78, rating: 4.5, reviews: 520000, types: ["theme parks", "shopping", "food"], cost: "medium-high", trend: "Theme-park demand can spike lodging", openingRisk: "Low" },
+  chicago: { poi: 80, rating: 4.5, reviews: 430000, types: ["big cities", "food", "museums", "shopping"], cost: "medium", trend: "Strong summer city demand", openingRisk: "Low" },
+  "los angeles": { poi: 86, rating: 4.4, reviews: 760000, types: ["big cities", "theme parks", "beaches", "shopping", "nightlife"], cost: "very high", trend: "High demand, spread-out logistics", openingRisk: "Medium" },
+  "san francisco": { poi: 78, rating: 4.5, reviews: 360000, types: ["food", "museums", "nature", "big cities"], cost: "very high", trend: "Expensive but attraction dense", openingRisk: "Medium" },
+  "las vegas": { poi: 66, rating: 4.3, reviews: 450000, types: ["nightlife", "shopping", "food"], cost: "medium-high", trend: "Nightlife spending risk is high", openingRisk: "Low" },
+  denver: { poi: 62, rating: 4.5, reviews: 190000, types: ["nature", "food", "big cities"], cost: "medium-high", trend: "Good nature gateway", openingRisk: "Medium" },
+  seattle: { poi: 70, rating: 4.5, reviews: 260000, types: ["nature", "food", "museums", "big cities"], cost: "high", trend: "Good summer travel demand", openingRisk: "Medium" },
+  honolulu: { poi: 74, rating: 4.6, reviews: 350000, types: ["beaches", "nature", "food"], cost: "very high", trend: "Dream destination with expensive logistics", openingRisk: "Medium" },
+  "grand canyon": { poi: 68, rating: 4.8, reviews: 280000, types: ["nature"], cost: "medium", trend: "Seasonal nature demand", openingRisk: "High" },
+  yellowstone: { poi: 72, rating: 4.8, reviews: 240000, types: ["nature"], cost: "medium-high", trend: "Seasonal lodging pressure near park", openingRisk: "High" },
+  yosemite: { poi: 72, rating: 4.8, reviews: 260000, types: ["nature"], cost: "high", trend: "Permit/lodging constraints can bite", openingRisk: "High" },
+};
+
+const TRAVEL_EVIDENCE_SOURCE_BASIS = [
+  "Distance/time: Google Routes API-ready. Current build uses a local coordinate heuristic.",
+  "Attractions: Google Places API-ready. Current build uses simulated POI density, rating, and review-volume signals.",
+  "Popularity: Google Trends API alpha-ready. Current build uses placeholder trend notes.",
+  "Costs: heuristic city cost pressure, not live pricing.",
+  "Accommodation: placeholder until hostel/hotel API integration is connected.",
+  "Evidence simulation — connect Google Routes/Places API for live validation.",
+];
+
+function getCityEvidenceProfile(city) {
+  const key = String(city || "").toLowerCase().replace(/\./g, "").trim();
+  const normalized = normalizePlace(city).name.toLowerCase();
+  return CITY_EVIDENCE_PROFILES[key] || CITY_EVIDENCE_PROFILES[normalized] || {
+    poi: 44,
+    rating: 4.2,
+    reviews: 55000,
+    types: ["big cities", "food"],
+    cost: "medium",
+    trend: "Placeholder demand signal until live APIs are connected",
+    openingRisk: "Medium",
+  };
+}
+
+function getCityDailyBudgetEstimate(profile, style = "balanced") {
+  const costBase = {
+    low: 76,
+    medium: 96,
+    "medium-high": 126,
+    high: 154,
+    "very high": 192,
+  }[profile.cost] || 108;
+  const styleMultiplier = { budget: 0.78, balanced: 1, comfortable: 1.32 }[style] || 1;
+  return costBase * styleMultiplier;
+}
+
+function getInterestMatchScore(profile, interests = []) {
+  if (!interests.length) return 45;
+  const matches = interests.filter((interest) => profile.types.includes(interest)).length;
+  return clamp((matches / interests.length) * 100 + Math.min(matches, 2) * 8, 12, 100);
+}
+
+function getStayRecommendation({ city, previous, input, role = "preferred", remainingBudget = 0 }) {
+  const profile = getCityEvidenceProfile(city);
+  const place = normalizePlace(city);
+  const previousPlace = previous ? normalizePlace(previous) : null;
+  const distance = previousPlace ? distanceBetween(previousPlace, place) : 0;
+  const longJump = distance > 34 || (previousPlace && previousPlace.region !== place.region);
+  const interestMatch = getInterestMatchScore(profile, input.interests || []);
+  const dailyBudget = getCityDailyBudgetEstimate(profile, input.style);
+  const budgetPressure = dailyBudget / Math.max((input.budget || 1) / Math.max(input.days || 1, 1), 1);
+  const stopType = role === "start"
+    ? "Launch point"
+    : longJump
+      ? "Long-distance add-on"
+      : profile.poi >= 80 && interestMatch >= 60
+        ? "Main stop"
+        : profile.poi >= 58
+          ? "Short stop"
+          : "Optional stop";
+  const minStay = stopType === "Main stop" ? 2 : stopType === "Long-distance add-on" ? 1 : 1;
+  const maxStay = stopType === "Main stop" ? (budgetPressure > 1.15 ? 3 : 4) : stopType === "Long-distance add-on" ? 2 : (interestMatch > 70 ? 2 : 1);
+  const confidence = longJump && budgetPressure > 1 ? "Low" : budgetPressure > 1.15 || profile.cost === "very high" ? "Medium" : "High";
+  const reason = stopType === "Launch point"
+    ? `${city} is the launch point, so the evidence focus is airport access and avoiding an expensive first night.`
+    : stopType === "Long-distance add-on"
+    ? `${city} adds a major distance jump. Keep it only if it is emotionally important or budget improves.`
+    : stopType === "Main stop"
+      ? `${city} has strong attraction density and matches your selected interests, but daily cost still controls the stay.`
+      : `${city} works as a shorter stop because it adds value without needing the whole route to bend around it.`;
+  const whyNotLonger = [
+    budgetPressure > 1 ? "budget pressure is already visible" : "longer stays reduce flexibility for later cities",
+    longJump ? "travel time from the previous stop adds fatigue" : "route fatigue rises if every stop becomes a main stop",
+    profile.cost.includes("high") ? "daily city cost is elevated" : "interest match does not justify using too much of the travel window",
+    role === "optional" ? "optional status means it should be cut before must-visits" : "must-visit status protects it, but not unlimited nights",
+  ];
+  const downsideSignals = [
+    profile.cost.includes("high") ? "high accommodation cost" : "",
+    longJump ? "long-distance jump" : "",
+    profile.types.includes("nightlife") ? "high nightlife overspending risk" : "",
+    place.name.toLowerCase().includes("airport") ? "airport transfer pressure" : "",
+    profile.openingRisk === "High" ? "opening-hour or access risk" : "",
+  ].filter(Boolean);
+  return {
+    stopType,
+    suggestedStayRange: stopType === "Launch point" ? "start only" : `${minStay}-${maxStay} night${maxStay === 1 ? "" : "s"}`,
+    confidence,
+    reason,
+    whyNotLonger,
+    evidence: {
+      googlePlaces: {
+        attractionDensityEstimate: profile.poi,
+        avgRating: profile.rating,
+        reviewVolume: profile.reviews,
+        topPlaceTypes: profile.types,
+        openingHourRisk: profile.openingRisk,
+      },
+      googleRoutes: {
+        distanceFromPrevious: previousPlace ? Math.round(distance * 11) : 0,
+        travelTimeFromPrevious: previousPlace ? (longJump ? "flight-level / long transfer" : "regional transfer") : "start",
+        transportModeEstimate: longJump ? "flight likely" : "bus/train plausible",
+      },
+      costPressure: {
+        dailyBudgetEstimate: Math.round(dailyBudget),
+        accommodationPressure: profile.cost.includes("high") ? "High" : "Moderate",
+        foodPressure: profile.cost === "very high" ? "High" : "Moderate",
+        cityCostTier: profile.cost,
+      },
+      trendSignal: {
+        popularityTrend: profile.trend,
+        seasonalityNote: "Placeholder trend signal until Google Trends API alpha is connected.",
+        source: "Google Trends API alpha / placeholder",
+      },
+      downsideSignals,
+    },
+  };
+}
+
+function classifyRouteEvidence({ route, cost, input, evidence = [] }) {
+  const longJumps = evidence.filter((item) => item.evidence.googleRoutes.travelTimeFromPrevious.includes("flight")).length;
+  const overBudgetRatio = cost.total / Math.max(input.budget || 1, 1);
+  const expensiveCities = evidence.filter((item) => item.evidence.costPressure.cityCostTier.includes("high")).length;
+  const interestStrength = evidence.length
+    ? evidence.reduce((sum, item) => sum + getInterestMatchScore(getCityEvidenceProfile(item.city), input.interests || []), 0) / evidence.length
+    : 0;
+  const fragility = clamp(overBudgetRatio * 46 + longJumps * 16 + expensiveCities * 7 + Math.max(0, route.length - input.days / 2) * 8, 4, 96);
+  const freedom = clamp(100 - fragility + Math.max(0, input.budget - cost.total) / 28 + interestStrength * 0.12, 0, 100);
+  const feasibility = fragility > 76 || overBudgetRatio > 1.2 ? "Weak" : fragility > 56 || overBudgetRatio > 0.95 ? "Conditional" : "Workable";
+  const confidence = longJumps >= 2 || overBudgetRatio > 1.1 || expensiveCities >= 3 ? "Low" : longJumps || expensiveCities ? "Medium" : "High";
+  return {
+    feasibility,
+    freedom: freedom > 68 ? "Wide" : freedom > 42 ? "Negotiable" : "Narrow",
+    fragility: fragility > 70 ? "High" : fragility > 45 ? "Medium" : "Low",
+    confidence,
+    fragilityValue: Math.round(fragility),
+    freedomValue: Math.round(freedom),
+    why: [
+      longJumps ? `${longJumps} long-distance jump${longJumps === 1 ? "" : "s"} add fatigue and transport risk.` : "The route is compact enough to avoid major backtracking.",
+      overBudgetRatio > 1 ? "Estimated cost pressure is above your stated budget." : "Budget covers the current heuristic cost pressure.",
+      expensiveCities ? `${expensiveCities} expensive city stop${expensiveCities === 1 ? "" : "s"} reduce flexibility.` : "City cost pressure is not dominating the route.",
+      interestStrength >= 65 ? "Selected interests match the route reasonably well." : "Interest match is moderate, so optional stops should stay negotiable.",
+    ],
+    saferMoves: [
+      `Increase travel budget by ${moneyWhole(Math.max(150, cost.total - input.budget + 250))}`,
+      "Remove one flight-heavy city",
+      "Switch to bus/train where regional transfers are realistic",
+      "Reduce expensive nightlife cities",
+      "Keep one recovery day unplanned",
+    ],
+  };
+}
+
+function formatCostPressure(value) {
+  const low = Math.max(0, value * 0.82);
+  const high = value * 1.18;
+  return `~${moneyWhole(low)}-${moneyWhole(high)}`;
+}
+
+function renderEvidenceBasis(container, evidenceSummary) {
+  if (!container) return;
+  const why = document.createElement("div");
+  why.className = "evidence-basis";
+  const title = document.createElement("strong");
+  title.textContent = "Why this route?";
+  const whyList = document.createElement("ul");
+  whyList.replaceChildren(...(evidenceSummary?.why || []).map((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    return li;
+  }));
+  const safer = document.createElement("strong");
+  safer.textContent = "What would make this safer?";
+  const saferList = document.createElement("ul");
+  saferList.replaceChildren(...(evidenceSummary?.saferMoves || []).map((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    return li;
+  }));
+  const sources = document.createElement("p");
+  sources.textContent = TRAVEL_EVIDENCE_SOURCE_BASIS.join(" ");
+  why.append(title, whyList, safer, saferList, sources);
+  container.replaceChildren(why);
+}
+
 function estimateTravelCost({ days, budget, style, currentState, startCity, interests }) {
   const multipliers = { budget: 0.82, balanced: 1, comfortable: 1.32 };
   const multiplier = multipliers[style] || 1;
@@ -1627,11 +1838,24 @@ function estimateTravelCost({ days, budget, style, currentState, startCity, inte
   const warning = total > budget
     ? "Budget warning: this trip is likely over budget. Reduce stops, switch to hostels, or add savings."
     : "Budget looks workable for a short, careful trip.";
-  const stops = route.map((city, index) => ({
-    city,
-    note: getStopExplanation(city, interests, index),
+  const evidence = route.map((city, index) => {
+    const stay = getStayRecommendation({
+      city,
+      previous: index > 0 ? route[index - 1] : null,
+      input: { days, budget, style, interests },
+      role: index === 0 ? "start" : "preferred",
+      remainingBudget: budget - total,
+    });
+    return { city, state: normalizePlace(city).region, recommendation: stay, evidence: stay.evidence };
+  });
+  const evidenceSummary = classifyRouteEvidence({ route: route.map(normalizePlace), cost: { total, transport, accommodation, food, legs: [] }, input: { days, budget, style, interests }, evidence });
+  const stops = evidence.map((item, index) => ({
+    city: item.city,
+    note: getStopExplanation(item.city, interests, index, item.recommendation),
+    evidence: item.evidence,
+    recommendation: item.recommendation,
   }));
-  return { route, transport, accommodation, food, total, warning, stops };
+  return { route, transport, accommodation, food, total, warning, stops, evidence, evidenceSummary };
 }
 
 function buildRoutePlan(input) {
@@ -1649,8 +1873,16 @@ function buildRoutePlan(input) {
     accommodation: result.accommodation * reduction,
     food: result.food * reduction,
     total: result.total * reduction,
-    warning: `${result.warning} Simulation trimmed one stop because stress or budget pressure is high.`,
-    stops: route.map((city, index) => ({ city, note: getStopExplanation(city, input.interests || [], index) })),
+    warning: `${result.warning} Evidence engine trimmed one stop because stress or budget pressure is high.`,
+    stops: route.map((city, index) => {
+      const recommendation = getStayRecommendation({ city, previous: index > 0 ? route[index - 1] : null, input, role: index === 0 ? "start" : "preferred" });
+      return { city, note: getStopExplanation(city, input.interests || [], index, recommendation), evidence: recommendation.evidence, recommendation };
+    }),
+    evidence: route.map((city, index) => {
+      const recommendation = getStayRecommendation({ city, previous: index > 0 ? route[index - 1] : null, input, role: index === 0 ? "start" : "preferred" });
+      return { city, state: normalizePlace(city).region, recommendation, evidence: recommendation.evidence };
+    }),
+    evidenceSummary: classifyRouteEvidence({ route: route.map(normalizePlace), cost: { ...result, total: result.total, legs: [] }, input, evidence: result.evidence || [] }),
   };
 }
 
@@ -1658,10 +1890,11 @@ function dedupeByName(items) {
   return [...new Set(items.filter(Boolean))];
 }
 
-function getStopExplanation(city, interests, index) {
+function getStopExplanation(city, interests, index, recommendation = null) {
   const interestText = interests.length ? interests.slice(0, 2).join(" and ") : "classic sightseeing";
   if (index === 0) return `${city} is a practical starting point with easy first-night planning.`;
-  return `${city} fits ${interestText} and keeps the route compact enough for student travel.`;
+  if (!recommendation) return `${city} fits ${interestText} and keeps the route compact enough for student travel.`;
+  return `${recommendation.stopType} · suggested ${recommendation.suggestedStayRange}. ${recommendation.reason}`;
 }
 
 function splitPlaces(text) {
@@ -1719,12 +1952,13 @@ function estimateOptimizedRoute(input) {
   const preferred = splitPlaces(input.preferred).map(normalizePlace);
   const must = splitPlaces(input.must).map(normalizePlace);
   const optional = splitPlaces(input.optional).map(normalizePlace);
+  const mustNames = new Set(must.map((stop) => stop.name));
+  const optionalNames = new Set(optional.map((stop) => stop.name));
   let candidateStops = dedupeStops([...must, ...preferred, ...optional]);
   let route = optimizeStopOrder(start, candidateStops, end);
   let cost = estimateRouteCost(route, input.days, input.style, input.transport);
 
   while ((cost.total > input.budget || route.length - 1 > input.days) && optional.length && route.length > 3) {
-    const optionalNames = new Set(optional.map((stop) => stop.name));
     const stopToRemove = [...candidateStops].reverse().find((stop) => optionalNames.has(stop.name));
     if (!stopToRemove) break;
     candidateStops = candidateStops.filter((stop) => stop.name !== stopToRemove.name);
@@ -1733,10 +1967,22 @@ function estimateOptimizedRoute(input) {
   }
 
   const stopNights = allocateStopDays(route, input.days);
+  const evidence = route.map((stop, index) => {
+    const role = index === 0 ? "start" : optionalNames.has(stop.name) ? "optional" : mustNames.has(stop.name) ? "must" : "preferred";
+    const recommendation = getStayRecommendation({
+      city: stop.name,
+      previous: index > 0 ? route[index - 1].name : null,
+      input: { ...input, interests: getSelectedInterests() },
+      role,
+      remainingBudget: input.budget - cost.total,
+    });
+    return { city: stop.name, state: stop.region, role, recommendation, evidence: recommendation.evidence };
+  });
+  const evidenceSummary = classifyRouteEvidence({ route, cost, input: { ...input, interests: getSelectedInterests() }, evidence });
   const warnings = buildOptimizerWarnings(route, cost, input);
   const cheaperRoute = buildAlternativeRoute(start, must, preferred, optional, end, input, "cheapest");
   const fasterRoute = buildAlternativeRoute(start, must, preferred, optional, end, input, "fastest");
-  return { route, cost, warnings, stopNights, cheaperRoute, fasterRoute, nearestAirport: route.at(-1).airport };
+  return { route, cost, warnings, stopNights, cheaperRoute, fasterRoute, nearestAirport: route.at(-1).airport, evidence, evidenceSummary };
 }
 
 function buildRoute(input) {
@@ -3239,11 +3485,17 @@ function updateTravelPlanner() {
     transport: result.transport,
     accommodation: result.accommodation,
     food: result.food,
+    evidenceSummary: result.evidenceSummary,
   };
-  elements.suggestedRoute.textContent = result.route.join(" to ");
+  elements.suggestedRoute.textContent = result.route.join(" → ");
   const overBudget = result.total > plannerInput.budget;
   const tooFewDays = plannerInput.days < Math.max(2, result.route.length - 1);
-  elements.tripWarning.textContent = `${result.warning} ${overBudget ? "This route may hurt your wallet." : "This route still leaves room for the story."}`;
+  const evidenceSummary = result.evidenceSummary || classifyRouteEvidence({ route: result.route.map(normalizePlace), cost: { total: result.total, legs: [] }, input: plannerInput, evidence: result.evidence || [] });
+  elements.tripWarning.textContent = `Evidence simulation — connect Google Routes/Places API for live validation. ${evidenceSummary.feasibility === "Weak" ? "This route may hurt your wallet." : "This route is best-supported under current assumptions."}`;
+  if (elements.routeFeasibility) elements.routeFeasibility.textContent = evidenceSummary.feasibility;
+  if (elements.travelFreedomLevel) elements.travelFreedomLevel.textContent = `${evidenceSummary.freedom} · ${evidenceSummary.freedomValue}/100`;
+  if (elements.routeFragilityLevel) elements.routeFragilityLevel.textContent = `${evidenceSummary.fragility} · ${evidenceSummary.fragilityValue}/100`;
+  if (elements.travelDataConfidence) elements.travelDataConfidence.textContent = evidenceSummary.confidence;
   if (elements.routePlannerNotice) {
     const notices = [];
     if (plannerInput.budget < 300) notices.push("Travel budget is very low. Keep the route short.");
@@ -3255,18 +3507,26 @@ function updateTravelPlanner() {
     elements.routePlannerNotice.textContent = notices.join(" ");
     elements.routePlannerNotice.classList.toggle("is-warning", notices.length > 0);
   }
-  elements.transportCost.textContent = moneyWhole(result.transport);
-  elements.accommodationCost.textContent = moneyWhole(result.accommodation);
-  elements.tripFoodCost.textContent = moneyWhole(result.food);
-  elements.totalTripCost.textContent = moneyWhole(result.total);
+  elements.transportCost.textContent = formatCostPressure(result.transport);
+  elements.accommodationCost.textContent = formatCostPressure(result.accommodation);
+  elements.tripFoodCost.textContent = formatCostPressure(result.food);
+  elements.totalTripCost.textContent = formatCostPressure(result.total);
   elements.recommendedStops.replaceChildren(
     ...result.stops.map((stop) => {
       const card = document.createElement("article");
       card.className = "stop-card";
-      card.innerHTML = `<strong>${stop.city}</strong><span>${stop.note}</span>`;
+      const signals = stop.evidence?.downsideSignals?.length ? stop.evidence.downsideSignals.join(", ") : "no major downside signal in placeholder model";
+      card.innerHTML = `
+        <small>${stop.recommendation?.stopType || "Route stop"} · suggested ${stop.recommendation?.suggestedStayRange || "1-2 nights"}</small>
+        <strong>${stop.city}</strong>
+        <span>${stop.note}</span>
+        <p><b>Why not longer?</b> ${(stop.recommendation?.whyNotLonger || []).slice(0, 2).join("; ")}.</p>
+        <p><b>Evidence:</b> POI density ${stop.evidence?.googlePlaces?.attractionDensityEstimate || "simulated"} · cost tier ${stop.evidence?.costPressure?.cityCostTier || "simulated"} · ${signals}.</p>
+      `;
       return card;
     }),
   );
+  renderEvidenceBasis(elements.travelSourceBasis, evidenceSummary);
   renderFinalOutcomeSummary();
   saveStateToStorage();
 }
@@ -3289,11 +3549,12 @@ function buildRouteTimeline(result, days) {
   const intensity = getRouteIntensity(result.route, days);
   return result.stopNights.map((stop, index) => {
     const leg = index === 0 ? null : result.cost.legs[index - 1];
+    const evidence = result.evidence?.find((item) => item.city === stop.name);
     const impact = leg ? moneyWhole(leg.cost) : "Start";
     const note = index === 0
       ? `Starting point · nearest airport ${stop.airport}`
-      : `${leg?.mode || "transport"} leg · ${impact} budget impact`;
-    return { ...stop, index, intensity, impact, note };
+      : `${evidence?.recommendation.stopType || "Route stop"} · suggested ${evidence?.recommendation.suggestedStayRange || "1-2 nights"} · ${leg?.mode || "transport"} pressure ${impact}`;
+    return { ...stop, index, intensity, impact, note, evidence };
   });
 }
 
@@ -3303,12 +3564,12 @@ function renderRouteTimeline(result, days) {
     ...timeline.map((stop) => {
       const card = document.createElement("article");
       card.className = "route-timeline-stop";
-      const daysLabel = stop.index === 0 ? "Start" : `${stop.days} day${stop.days === 1 ? "" : "s"}`;
+      const daysLabel = stop.index === 0 ? "Start" : stop.evidence?.recommendation.suggestedStayRange || "Stay range";
       card.innerHTML = `
         <span>${daysLabel} · ${stop.intensity}</span>
         <strong>${stop.name}</strong>
         <p>${stop.note}</p>
-        <small>${stop.index === 0 ? "Route begins here" : `Departure airport: ${stop.airport}`}</small>
+        <small>${stop.index === 0 ? "Route begins here" : `Evidence confidence: ${stop.evidence?.recommendation.confidence || "Medium"} · departure airport: ${stop.airport}`}</small>
       `;
       return card;
     }),
@@ -3328,6 +3589,8 @@ function updateRouteOptimizer() {
     elements.optimizerWarnings.textContent = "No route yet. Pick a city above and the optimizer will build the story.";
     elements.routeIntensity.textContent = "Waiting";
     elements.routeType.textContent = "No route";
+    if (elements.optimizerConfidence) elements.optimizerConfidence.textContent = "Waiting";
+    if (elements.optimizerTravelFreedom) elements.optimizerTravelFreedom.textContent = "Waiting";
     elements.optimizerTransportCost.textContent = moneyWhole(0);
     elements.optimizerAccommodationCost.textContent = moneyWhole(0);
     elements.optimizerFoodCost.textContent = moneyWhole(0);
@@ -3336,6 +3599,10 @@ function updateRouteOptimizer() {
     elements.optimizedStops.replaceChildren();
     elements.cheaperRoute.textContent = "Add destinations first";
     elements.fasterRoute.textContent = "Add destinations first";
+    renderEvidenceBasis(elements.optimizerEvidenceBasis, {
+      why: ["No route evidence yet because no desired places are selected."],
+      saferMoves: ["Add at least one must-visit or preferred city.", "Keep optional places negotiable until the budget is clear."],
+    });
     elements.routeOptimizerNotice.textContent = "Add at least one must-visit or preferred city to build a route.";
     elements.routeOptimizerNotice.classList.add("is-warning");
     renderFinalOutcomeSummary();
@@ -3358,6 +3625,7 @@ function updateRouteOptimizer() {
     intensity: getRouteIntensity(result.route, optimizerInput.days),
     type: getRouteType(result.route, result.cost),
     strategy,
+    evidenceSummary: result.evidenceSummary,
   };
   const days = optimizerInput.days;
   const longJump = result.cost.legs.some((leg) => leg.longLeg);
@@ -3372,28 +3640,39 @@ function updateRouteOptimizer() {
     elements.routeOptimizerNotice.textContent = notices.join(" ");
     elements.routeOptimizerNotice.classList.toggle("is-warning", notices.length > 0);
   }
-  elements.optimizedRoute.textContent = result.route.map((stop) => stop.name).join(" to ");
+  elements.optimizedRoute.textContent = result.route.map((stop) => stop.name).join(" → ");
   elements.optimizedRoute.classList.remove("route-pop");
   requestAnimationFrame(() => elements.optimizedRoute.classList.add("route-pop"));
-  elements.optimizerWarnings.textContent = `Summer route unlocked: ${result.route.map((stop) => stop.name).join(" to ")}. ${getHumanInsight("route", result.cost.total, { overBudget, rushed, longJump })} Recovery ${strategy.recoveryScore}/100. Freedom ${strategy.freedomLevel}. Flexibility ${strategy.flexibilityScore}/100. Collapse probability ${strategy.collapseProbability}%. ${strategy.interpretation} ${result.warnings.join(" ")}`;
+  const evidenceSummary = result.evidenceSummary || classifyRouteEvidence({ route: result.route, cost: result.cost, input: optimizerInput, evidence: result.evidence || [] });
+  elements.optimizerWarnings.textContent = `Evidence simulation — connect Google Routes/Places API for live validation. Best-supported route: ${result.route.map((stop) => stop.name).join(" → ")}. Feasibility: ${evidenceSummary.feasibility}. ${strategy.interpretation} ${result.warnings.join(" ")}`;
   elements.routeIntensity.textContent = getRouteIntensity(result.route, days);
   elements.routeType.textContent = getRouteType(result.route, result.cost);
-  elements.optimizerTransportCost.textContent = moneyWhole(result.cost.transport);
-  elements.optimizerAccommodationCost.textContent = moneyWhole(result.cost.accommodation);
-  elements.optimizerFoodCost.textContent = moneyWhole(result.cost.food);
-  elements.optimizerTotalCost.textContent = moneyWhole(result.cost.total);
+  if (elements.optimizerConfidence) elements.optimizerConfidence.textContent = evidenceSummary.confidence;
+  if (elements.optimizerTravelFreedom) elements.optimizerTravelFreedom.textContent = `${evidenceSummary.freedom} · ${evidenceSummary.freedomValue}/100`;
+  elements.optimizerTransportCost.textContent = formatCostPressure(result.cost.transport);
+  elements.optimizerAccommodationCost.textContent = formatCostPressure(result.cost.accommodation);
+  elements.optimizerFoodCost.textContent = formatCostPressure(result.cost.food);
+  elements.optimizerTotalCost.textContent = formatCostPressure(result.cost.total);
   renderRouteTimeline(result, days);
-  elements.cheaperRoute.textContent = `${result.cheaperRoute.route.map((stop) => stop.name).join(" to ")} (${moneyWhole(result.cheaperRoute.cost.total)})`;
-  elements.fasterRoute.textContent = `${result.fasterRoute.route.map((stop) => stop.name).join(" to ")} (${moneyWhole(result.fasterRoute.cost.total)})`;
+  elements.cheaperRoute.textContent = `${result.cheaperRoute.route.map((stop) => stop.name).join(" → ")} · pressure ${formatCostPressure(result.cheaperRoute.cost.total)}`;
+  elements.fasterRoute.textContent = `${result.fasterRoute.route.map((stop) => stop.name).join(" → ")} · pressure ${formatCostPressure(result.fasterRoute.cost.total)}`;
   elements.optimizedStops.replaceChildren(
     ...result.stopNights.map((stop, index) => {
       const card = document.createElement("article");
       card.className = "optimized-stop";
-      const days = index === 0 ? "Start" : `${stop.days} day${stop.days === 1 ? "" : "s"}`;
-      card.innerHTML = `<small>${days}</small><strong>${stop.name}</strong><span>Nearest departure airport: ${stop.airport}</span>`;
+      const evidence = result.evidence?.find((item) => item.city === stop.name);
+      const stay = index === 0 ? "Start" : `${evidence?.recommendation.stopType || "Route stop"} · suggested ${evidence?.recommendation.suggestedStayRange || "1-2 nights"}`;
+      const why = evidence?.recommendation.whyNotLonger?.slice(0, 2).join("; ") || "budget, fatigue, and interest match control the stay range";
+      card.innerHTML = `
+        <small>${stay}</small>
+        <strong>${stop.name}</strong>
+        <span>${evidence?.recommendation.reason || `Nearest departure airport: ${stop.airport}`}</span>
+        <p><b>Why not longer?</b> ${why}.</p>
+      `;
       return card;
     }),
   );
+  renderEvidenceBasis(elements.optimizerEvidenceBasis, evidenceSummary);
   renderFinalOutcomeSummary();
   saveStateToStorage();
 }
@@ -3401,7 +3680,7 @@ function updateRouteOptimizer() {
 function buildFinalOutcomeSummary() {
   const outcome = calculateSummerOutcome();
   const route = elements.optimizedRoute.textContent || "your route";
-  const routeStops = route.split(" to ").filter(Boolean);
+  const routeStops = route.split(/\s(?:to|→)\s/).filter(Boolean);
   const state = stateData[outcome.input.stateCode]?.name || stateData[activeState].name;
   const type = getStudentTypeProfile().title;
   const weekly = buildWeeklySummary();

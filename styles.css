@@ -1700,6 +1700,10 @@ textarea {
   letter-spacing: -0.015em;
 }
 
+.route-hidden-field {
+  display: none;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2070,6 +2074,10 @@ label {
   gap: 12px;
 }
 
+.evidence-meta {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .route-meta article {
   display: grid;
   gap: 6px;
@@ -2161,6 +2169,54 @@ label {
   color: var(--ink-soft);
   font-weight: 500;
   line-height: 1.4;
+}
+
+.recommended-stops,
+.optimized-stops {
+  align-items: start;
+}
+
+.stop-card small,
+.optimized-stop small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stop-card p,
+.optimized-stop p {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  font-weight: 550;
+  line-height: 1.4;
+}
+
+.stop-card b,
+.optimized-stop b {
+  color: var(--ink);
+}
+
+.evidence-basis {
+  display: grid;
+  gap: 10px;
+}
+
+.evidence-basis strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+}
+
+.evidence-basis p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .route-pop {
@@ -2525,7 +2581,8 @@ label {
   .ranking-grid,
   .live-metric-grid,
   .community-insights,
-  .local-grid {
+  .local-grid,
+  .evidence-meta {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -2552,6 +2609,7 @@ label {
   .simulator-section,
   .travel-section,
   .route-optimizer-section,
+  .optimizer-section,
   .local-section {
     border-radius: 14px;
     padding: 16px;

@@ -312,18 +312,18 @@
         </div>
       </section>
 
-      <section class="travel-section" id="travelStage" aria-label="After WAT Travel Planner">
+      <section class="travel-section" id="travelStage" aria-label="Post-WAT Travel Evidence Engine">
         <header class="section-head">
-          <div><p class="eyebrow">Plan the trip after.</p><h2>Plan the trip after.</h2></div>
-          <p>Drop in the places you want. We’ll fight the backtracking for you.</p>
+          <div><p class="eyebrow">Travel evidence</p><h2>Post-WAT Travel Evidence Engine</h2></div>
+          <p>Choose the places you want. The system explains what looks realistic, what is fragile, and what evidence supports the route.</p>
         </header>
         <div class="travel-layout">
           <form class="travel-form" id="travelForm">
             <div class="form-grid">
-              <label>Current state<select id="travelState"></select></label>
-              <label>Travel start city<select id="startCity"></select></label>
-              <label>Travel days<input id="travelDays" type="number" min="1" step="1" /></label>
-              <label>Travel budget<input id="tripBudget" type="number" min="0" step="50" /></label>
+              <label>Starting city/state<select id="travelState"></select></label>
+              <label>First travel city<select id="startCity"></select></label>
+              <label>Travel window<input id="travelDays" type="number" min="1" step="1" /></label>
+              <label>Total travel budget<input id="tripBudget" type="number" min="0" step="50" /></label>
               <label>Travel style<select id="travelStyle"><option value="budget">Budget</option><option value="balanced">Balanced</option><option value="comfortable">Comfortable</option></select></label>
             </div>
             <fieldset class="interest-grid">
@@ -341,25 +341,35 @@
           </form>
           <div class="trip-output">
             <article class="route-card">
-              <span>Suggested route</span>
+              <span>Best-supported route</span>
               <strong id="suggestedRoute">Route loading</strong>
               <p id="tripWarning">Budget looks workable.</p>
             </article>
+            <div class="route-meta evidence-meta">
+              <article><span>Route feasibility</span><strong id="routeFeasibility">Reading</strong></article>
+              <article><span>Travel freedom</span><strong id="travelFreedomLevel">Reading</strong></article>
+              <article><span>Route fragility</span><strong id="routeFragilityLevel">Reading</strong></article>
+              <article><span>Data confidence</span><strong id="travelDataConfidence">Simulation</strong></article>
+            </div>
             <dl class="result-list">
-              <div><dt>Transport</dt><dd id="transportCost">$0</dd></div>
-              <div><dt>Accommodation</dt><dd id="accommodationCost">$0</dd></div>
-              <div><dt>Food</dt><dd id="tripFoodCost">$0</dd></div>
-              <div><dt>Total trip cost</dt><dd id="totalTripCost">$0</dd></div>
+              <div><dt>Transport pressure</dt><dd id="transportCost">$0</dd></div>
+              <div><dt>Accommodation pressure</dt><dd id="accommodationCost">$0</dd></div>
+              <div><dt>Food pressure</dt><dd id="tripFoodCost">$0</dd></div>
+              <div><dt>Estimated cost pressure</dt><dd id="totalTripCost">$0</dd></div>
             </dl>
             <div class="recommended-stops" id="recommendedStops"></div>
+            <details class="source-basis-card travel-source-card" open>
+              <summary>Route evidence basis</summary>
+              <div id="travelSourceBasis"></div>
+            </details>
           </div>
         </div>
       </section>
 
-      <section class="optimizer-section" aria-label="Custom route optimizer">
+      <section class="optimizer-section" aria-label="Custom travel evidence route">
         <header class="section-head">
-          <div><p class="eyebrow">Route optimizer</p><h2>Build your own after-WAT route</h2></div>
-          <p>Drop in the places you want. The app trims backtracking and protects must-visits.</p>
+          <div><p class="eyebrow">Route strategy</p><h2>Build your own evidence-backed route</h2></div>
+          <p>Select desired places. Must-visits stay protected, optional stops get cut first when the evidence gets weak.</p>
         </header>
         <div class="optimizer-layout">
           <form class="optimizer-form" id="routeOptimizerForm">
@@ -376,36 +386,42 @@
               <label>Must-visit places<select id="mustPicker"></select><button type="button" data-add-location="must">Add must-visit</button></label>
               <label>Optional places<select id="optionalPicker"></select><button type="button" data-add-location="optional">Add optional</button></label>
             </div>
-            <textarea id="preferredDestinations" aria-label="Preferred destinations"></textarea>
-            <textarea id="mustVisitPlaces" aria-label="Must visit places"></textarea>
-            <textarea id="optionalPlaces" aria-label="Optional places"></textarea>
+            <textarea id="preferredDestinations" class="route-hidden-field" aria-label="Preferred destinations" readonly></textarea>
+            <textarea id="mustVisitPlaces" class="route-hidden-field" aria-label="Must visit places" readonly></textarea>
+            <textarea id="optionalPlaces" class="route-hidden-field" aria-label="Optional places" readonly></textarea>
             <div class="chip-row" id="preferredChips"></div>
             <div class="chip-row" id="mustChips"></div>
             <div class="chip-row" id="optionalChips"></div>
             <p class="inline-notice" id="routeOptimizerNotice"></p>
           </form>
-          <div class="optimizer-output">
+            <div class="optimizer-output">
             <article class="route-card">
-              <span>Recommended route</span>
+              <span>Best-supported route under current assumptions</span>
               <strong id="optimizedRoute">Route loading</strong>
               <p id="optimizerWarnings">Route looks workable.</p>
             </article>
             <div class="route-meta">
               <article><span>Route intensity</span><strong id="routeIntensity">Balanced</strong></article>
               <article><span>Route type</span><strong id="routeType">Low-backtracking route</strong></article>
+              <article><span>Evidence confidence</span><strong id="optimizerConfidence">Simulation</strong></article>
+              <article><span>Travel freedom</span><strong id="optimizerTravelFreedom">Reading</strong></article>
             </div>
             <div class="route-timeline" id="routeTimeline"></div>
             <div class="optimized-stops" id="optimizedStops"></div>
             <dl class="result-list">
-              <div><dt>Transport</dt><dd id="optimizerTransportCost">$0</dd></div>
-              <div><dt>Accommodation</dt><dd id="optimizerAccommodationCost">$0</dd></div>
-              <div><dt>Food</dt><dd id="optimizerFoodCost">$0</dd></div>
-              <div><dt>Total route cost</dt><dd id="optimizerTotalCost">$0</dd></div>
+              <div><dt>Transport pressure</dt><dd id="optimizerTransportCost">$0</dd></div>
+              <div><dt>Accommodation pressure</dt><dd id="optimizerAccommodationCost">$0</dd></div>
+              <div><dt>Food pressure</dt><dd id="optimizerFoodCost">$0</dd></div>
+              <div><dt>Estimated route pressure</dt><dd id="optimizerTotalCost">$0</dd></div>
             </dl>
             <div class="alternative-routes">
               <article><span>Cheaper route</span><strong id="cheaperRoute">Route loading</strong></article>
               <article><span>Faster route</span><strong id="fasterRoute">Route loading</strong></article>
             </div>
+            <details class="source-basis-card travel-source-card" open>
+              <summary>Evidence simulation basis</summary>
+              <div id="optimizerEvidenceBasis"></div>
+            </details>
           </div>
         </div>
       </section>
