@@ -4,6 +4,7 @@ const fipsToCode = dataSet.fipsToCode;
 const stateEntries = Object.entries(stateData).sort(([, a], [, b]) => a.name.localeCompare(b.name));
 const dataSourceRegistry = dataSet.dataSourceRegistry || {};
 const serviceRegistry = window.WAT_SERVICES || {};
+const travelService = serviceRegistry.travel || {};
 
 const REALITY_SOURCE_BASIS = {
   minimumWage: `${dataSourceRegistry.minimumWage?.status || "public reference"}: ${dataSourceRegistry.minimumWage?.source || "state labor departments"}.`,
@@ -34,8 +35,7 @@ const REALITY_TIER_DEFINITIONS = [
   { min: 0, label: "Trap setup", meaning: "High risk of returning with little or negative savings unless conditions improve." },
 ];
 
-// Heuristic route sets. A production version should replace this with Google Routes/Places and lodging APIs.
-const TRAVEL_ROUTE_SETS = {
+const DEFAULT_TRAVEL_ROUTE_SETS = {
   Northeast: ["New York City", "Boston", "Washington, DC", "Philadelphia"],
   Southeast: ["Orlando", "Miami", "Savannah", "New Orleans"],
   Midwest: ["Chicago", "St. Louis", "Nashville", "Minneapolis"],
@@ -43,6 +43,8 @@ const TRAVEL_ROUTE_SETS = {
   Mountain: ["Denver", "Salt Lake City", "Grand Canyon", "Yellowstone"],
   Pacific: ["Honolulu", "Maui", "Los Angeles", "San Francisco"],
 };
+
+const TRAVEL_ROUTE_SETS = travelService.routeSets || DEFAULT_TRAVEL_ROUTE_SETS;
 
 // Placeholder city graph for frontend demo routing. Replace with real distance, fare, and airport data later.
 const CITY_GRAPH = {
@@ -1685,46 +1687,13 @@ function rankStates(category) {
     .slice(0, 8);
 }
 
-const INTEREST_ROUTE_STOPS = {
-  "big cities": ["New York City", "Los Angeles", "Chicago", "Boston", "Washington, DC"],
-  nature: ["Grand Canyon", "Yellowstone", "Yosemite", "Denver", "Seattle"],
-  "theme parks": ["Orlando", "Los Angeles", "San Diego"],
-  beaches: ["Miami", "San Diego", "Honolulu", "Charleston"],
-  shopping: ["New York City", "Los Angeles", "Las Vegas", "Chicago"],
-  food: ["New York City", "Chicago", "New Orleans", "San Francisco"],
-  museums: ["Washington, DC", "New York City", "Boston", "Chicago"],
-  nightlife: ["New York City", "Miami", "Las Vegas", "New Orleans"],
-};
-
-// API-ready travel evidence estimates. Replace with Google Places/Routes, Trends, CPI, and lodging APIs when connected.
-const CITY_EVIDENCE_PROFILES = {
-  "new york city": { poi: 96, rating: 4.6, reviews: 980000, types: ["big cities", "food", "museums", "nightlife", "shopping"], cost: "very high", trend: "High global demand year-round", openingRisk: "Low" },
-  boston: { poi: 76, rating: 4.5, reviews: 310000, types: ["big cities", "museums", "food"], cost: "high", trend: "Strong student/history demand", openingRisk: "Low" },
-  "washington, dc": { poi: 82, rating: 4.6, reviews: 420000, types: ["museums", "big cities", "food"], cost: "medium-high", trend: "Museum-heavy demand; many free attractions", openingRisk: "Low" },
-  philadelphia: { poi: 64, rating: 4.4, reviews: 210000, types: ["food", "museums", "big cities"], cost: "medium", trend: "Good value East Coast add-on", openingRisk: "Medium" },
-  miami: { poi: 72, rating: 4.4, reviews: 390000, types: ["beaches", "nightlife", "food"], cost: "high", trend: "Seasonal beach/nightlife demand", openingRisk: "Medium" },
-  orlando: { poi: 78, rating: 4.5, reviews: 520000, types: ["theme parks", "shopping", "food"], cost: "medium-high", trend: "Theme-park demand can spike lodging", openingRisk: "Low" },
-  chicago: { poi: 80, rating: 4.5, reviews: 430000, types: ["big cities", "food", "museums", "shopping"], cost: "medium", trend: "Strong summer city demand", openingRisk: "Low" },
-  "los angeles": { poi: 86, rating: 4.4, reviews: 760000, types: ["big cities", "theme parks", "beaches", "shopping", "nightlife"], cost: "very high", trend: "High demand, spread-out logistics", openingRisk: "Medium" },
-  "san francisco": { poi: 78, rating: 4.5, reviews: 360000, types: ["food", "museums", "nature", "big cities"], cost: "very high", trend: "Expensive but attraction dense", openingRisk: "Medium" },
-  "las vegas": { poi: 66, rating: 4.3, reviews: 450000, types: ["nightlife", "shopping", "food"], cost: "medium-high", trend: "Nightlife spending risk is high", openingRisk: "Low" },
-  denver: { poi: 62, rating: 4.5, reviews: 190000, types: ["nature", "food", "big cities"], cost: "medium-high", trend: "Good nature gateway", openingRisk: "Medium" },
-  seattle: { poi: 70, rating: 4.5, reviews: 260000, types: ["nature", "food", "museums", "big cities"], cost: "high", trend: "Good summer travel demand", openingRisk: "Medium" },
-  honolulu: { poi: 74, rating: 4.6, reviews: 350000, types: ["beaches", "nature", "food"], cost: "very high", trend: "Dream destination with expensive logistics", openingRisk: "Medium" },
-  "grand canyon": { poi: 68, rating: 4.8, reviews: 280000, types: ["nature"], cost: "medium", trend: "Seasonal nature demand", openingRisk: "High" },
-  yellowstone: { poi: 72, rating: 4.8, reviews: 240000, types: ["nature"], cost: "medium-high", trend: "Seasonal lodging pressure near park", openingRisk: "High" },
-  yosemite: { poi: 72, rating: 4.8, reviews: 260000, types: ["nature"], cost: "high", trend: "Permit/lodging constraints can bite", openingRisk: "High" },
-};
+const INTEREST_ROUTE_STOPS = travelService.interestRouteStops || {};
+const CITY_EVIDENCE_PROFILES = travelService.cityEvidenceProfiles || {};
 
 const TRAVEL_EVIDENCE_SOURCE_BASIS = [
   serviceRegistry.maps?.getSourceBasis?.() || "Google Maps Platform-ready architecture is prepared for routes, places, and distance validation.",
-  serviceRegistry.travel?.getSourceBasis?.() || "Travel evidence is API-ready, not live pricing.",
-  "Distance/time: Google Routes API-ready. Current build uses a local coordinate heuristic.",
-  "Attractions: Google Places API-ready. Current build uses local placeholder POI, rating, and review-volume fields.",
-  "Popularity: Google Trends API alpha-ready. Current build uses placeholder trend notes.",
-  "Costs: heuristic city cost pressure, not live pricing.",
-  "Accommodation: placeholder until hostel/hotel API integration is connected.",
-  "Route evidence is currently estimated. Connect Google Routes/Places API for live validation.",
+  travelService.getSourceBasis?.() || "Travel evidence is API-ready, not live pricing.",
+  ...(travelService.evidenceSourceBasis || []),
 ];
 
 function getCityEvidenceProfile(city) {
