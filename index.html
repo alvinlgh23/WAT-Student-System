@@ -3,108 +3,486 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WAT Student US Map</title>
+    <title>WAT Student OS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Inter+Tight:wght@700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <nav class="journey-nav" id="journeyNav" aria-label="WAT journey navigation">
+      <a href="#identityStage" data-stage="choose">Choose</a>
+      <a href="#simulatorStage" data-stage="simulate">Simulate</a>
+      <a href="#liveSummer" data-stage="track">Track</a>
+      <a href="#travelStage" data-stage="travel">Travel</a>
+      <a href="#recapStage" data-stage="recap">Recap</a>
+    </nav>
+
+    <div class="sticky-summer-status" id="stickySummerStatus" aria-live="polite">
+      <span id="stickySummerText">Day 1/120 · $0 projected · Stable · New Jersey</span>
+    </div>
+
     <main class="app-shell">
-      <section class="map-stage" aria-label="Interactive United States state comparison map">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">WAT Student Planner</p>
-            <h1>Compare US states before choosing your Work and Travel destination.</h1>
-          </div>
-          <div class="metric-strip" aria-label="Selected state quick summary">
-            <span id="quickWage">$0/hr</span>
-            <span id="quickTax">0% tax</span>
-            <span id="quickScore">0/100</span>
-          </div>
-        </header>
-
-        <div class="map-wrap">
-          <svg
-            class="us-map"
-            id="usMap"
-            viewBox="0 0 975 610"
-            role="img"
-            aria-label="Interactive map of the United States"
-          >
-            <g id="stateLayer"></g>
-          </svg>
-          <div class="map-loading" id="mapLoading">Loading US map...</div>
-          <div class="map-tip" id="mapTip" role="status"></div>
+      <section class="hero-section" id="chooseStage" aria-label="WAT Student OS opening">
+        <div class="hero-copy">
+          <p class="eyebrow">WAT Student OS</p>
+          <h1>Choose the state, run the money, plan the trip after.</h1>
+          <p>Pick a state, simulate your summer, track the grind, protect the route, and come home with a story.</p>
+          <a class="primary-action" href="#identityStage">Start simulation</a>
         </div>
-
-        <footer class="source-note">
-          MVP data uses 2026 public references where available and light estimates for comparison.
-          Verify exact local wages, city taxes, housing, and employer details before committing.
-          Sources:
-          <a href="https://www.paycor.com/resource-center/articles/minimum-wage-by-state/">minimum wage</a>,
-          <a href="https://taxfoundation.org/data/all/state/state-income-tax-rates-2026/">income tax</a>,
-          <a href="https://taxfoundation.org/data/all/state/sales-tax-rates/">sales tax</a>.
-        </footer>
+        <div class="hero-metrics" aria-label="Selected state quick summary">
+          <article><span>Minimum wage</span><strong id="quickWage">$0/hr</strong></article>
+          <article><span>Tax read</span><strong id="quickTax">Tax loading</strong></article>
+          <article><span>Reality tier</span><strong id="quickScore">Loading</strong></article>
+        </div>
       </section>
 
-      <aside class="state-panel" aria-live="polite">
-        <div class="panel-header">
-          <p class="eyebrow">Selected State</p>
-          <h2 id="stateName">New Jersey</h2>
-          <p id="stateVerdict">Good earning potential, but rent is painful.</p>
+      <section class="student-type-section" id="identityStage" aria-label="WAT identity selector">
+        <header class="section-head compact">
+          <div>
+            <p class="eyebrow">Identity</p>
+            <h2>What kind of WAT student are you?</h2>
+          </div>
+          <p id="studentTypeAdvice">Choose a strategy and the whole system shifts around it.</p>
+        </header>
+        <div class="student-type-grid" id="studentTypeGrid"></div>
+      </section>
+
+      <section class="map-stage" aria-label="Interactive WAT map">
+        <header class="section-head">
+          <div>
+            <p class="eyebrow">Phase 1</p>
+            <h2>Interactive WAT map</h2>
+          </div>
+          <p>Pick a state before you sign your summer away.</p>
+        </header>
+
+        <div class="control-row">
+          <label>Choose state<select id="stateSelect"></select></label>
+          <span id="dataUpdated">Updated</span>
         </div>
 
-        <div class="score-card">
-          <span>WAT Survival Score</span>
-          <strong id="survivalScore">72</strong>
-          <div class="score-track" aria-hidden="true">
-            <div id="scoreFill"></div>
+        <div class="map-layer-tabs" id="mapLayerTabs" aria-label="Map layers"></div>
+        <p class="map-legend-label" id="mapLegendLabel">Best overall WAT reality fit</p>
+
+        <div class="map-and-panel">
+          <div class="map-wrap">
+            <svg class="us-map" id="usMap" viewBox="0 0 975 610" role="img" aria-label="Interactive map of the United States">
+              <g id="stateLayer"></g>
+            </svg>
+            <div class="map-loading" id="mapLoading">Loading US map...</div>
+            <div class="map-tip" id="mapTip" role="status"></div>
+          </div>
+
+          <aside class="state-panel" aria-live="polite">
+            <p class="eyebrow">Selected state</p>
+            <h3 id="stateName">New Jersey</h3>
+            <p class="state-personality" id="statePersonality">Strong wage zone, painful housing zone.</p>
+            <p id="stateVerdict">Good earning potential, but rent is painful.</p>
+            <div class="score-card reality-card">
+              <span>Reality tier</span>
+              <strong id="survivalScore">Balanced</strong>
+              <p id="realityMeaning">Can save and travel if rent stays reasonable.</p>
+              <small id="realityScore">Score: 72/100</small>
+              <div class="score-track"><div id="scoreFill"></div></div>
+            </div>
+            <div class="reality-decision-card" id="realityDecisionCard"></div>
+            <dl class="detail-list">
+              <div><dt>Minimum wage</dt><dd id="minWage">$0/hr</dd></div>
+              <div><dt>Typical WAT job wage estimate</dt><dd id="avgWage">$0/hr</dd></div>
+              <div><dt>State income tax</dt><dd id="incomeTax">Loading</dd></div>
+              <div><dt>Sales tax</dt><dd id="salesTax">Loading</dd></div>
+              <div><dt>Cost of living</dt><dd id="costLevel">Loading</dd></div>
+              <div><dt>Rent range</dt><dd id="rentRange">$0</dd></div>
+              <div><dt>Possible monthly money left</dt><dd id="savings">$0</dd></div>
+            </dl>
+            <div class="score-factors" id="scoreFactors"></div>
+            <details class="source-basis-card">
+              <summary>Source basis and confidence</summary>
+              <div id="sourceBasis"></div>
+            </details>
+          </aside>
+        </div>
+      </section>
+
+      <section class="live-summer-section" id="liveSummer" aria-label="Live Summer Dashboard">
+        <header class="section-head">
+          <div>
+            <p class="eyebrow">Live system</p>
+            <h2>Live Summer Dashboard</h2>
+          </div>
+          <p id="liveInsight">Log your first shift to wake the system up.</p>
+        </header>
+
+        <div class="summer-status">
+          <div>
+            <span>Summer status</span>
+            <strong id="summerDayCount">Day 1 / 120</strong>
+            <p id="summerStatusLine">Your summer has not started yet.</p>
+          </div>
+          <div class="summer-progress-track"><div id="summerProgressFill"></div></div>
+          <div class="summer-progress-meta">
+            <span id="daysCompleted">0 days completed</span>
+            <span id="summerCompletion">0% complete</span>
           </div>
         </div>
 
-        <dl class="detail-list">
-          <div>
-            <dt>Minimum wage</dt>
-            <dd id="minWage">$15.13/hr</dd>
-          </div>
-          <div>
-            <dt>Average wage</dt>
-            <dd id="avgWage">$23/hr</dd>
-          </div>
-          <div>
-            <dt>State income tax</dt>
-            <dd id="incomeTax">1.40% - 10.75%</dd>
-          </div>
-          <div>
-            <dt>Sales tax</dt>
-            <dd id="salesTax">6.63%</dd>
-          </div>
-          <div>
-            <dt>Cost of living</dt>
-            <dd id="costLevel">High</dd>
-          </div>
-          <div>
-            <dt>Estimated rent</dt>
-            <dd id="rentRange">$900 - $1,450/mo</dd>
-          </div>
-          <div>
-            <dt>Monthly savings</dt>
-            <dd id="savings">$450 - $850</dd>
-          </div>
-        </dl>
-
-        <div class="legend">
-          <p>Map color</p>
-          <div><span class="legend-dot high"></span> Strong WAT fit</div>
-          <div><span class="legend-dot mid"></span> Balanced</div>
-          <div><span class="legend-dot low"></span> Higher caution</div>
+        <div class="live-metric-grid">
+          <article><span>Projected return home</span><strong id="liveProjectedSavings">$0</strong></article>
+          <article><span>Total tracked earnings</span><strong id="liveTrackedEarnings">$0</strong></article>
+          <article><span>Total tracked spending</span><strong id="liveTrackedSpending">$0</strong></article>
+          <article><span>After-travel estimate</span><strong id="liveAfterTravel">$0</strong></article>
+          <article><span>Hours this week</span><strong id="liveWeeklyHours">0</strong></article>
+          <article><span>Work intensity</span><strong id="liveWorkIntensity">Watching</strong></article>
+          <article><span>Savings trend</span><strong id="liveSavingsTrend">Watching</strong></article>
+          <article><span>Travel fund</span><strong id="liveTravelFund">0%</strong></article>
+          <article><span>Next paycheck</span><strong id="livePaycheckCountdown">0 days</strong></article>
         </div>
 
-        <div class="premium-lock">
-          <span>Premium preview</span>
-          <p>Inflation by state, city-level rent, employer reviews, and trip planning can be layered into the next version.</p>
+        <div class="live-ops-grid">
+          <form class="summer-settings-form" id="summerSettingsForm">
+            <div class="form-grid">
+              <label>WAT start date<input id="watStartDate" type="date" /></label>
+              <label>WAT end date<input id="watEndDate" type="date" /></label>
+              <label>Weekly work target<input id="weeklyWorkTarget" type="number" min="1" step="1" /></label>
+              <label>Savings target<input id="savingsTarget" type="number" min="0" step="50" /></label>
+              <label>Pay frequency<select id="payFrequency">
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Biweekly</option>
+                <option value="monthly">Monthly</option>
+              </select></label>
+              <label>Next payday<input id="nextPayday" type="date" /></label>
+            </div>
+            <button class="secondary-action" id="resetDemoButton" type="button">Reset local data</button>
+          </form>
+
+          <form class="daily-log-form" id="dailyLogForm">
+            <div class="quick-log-row">
+              <button type="button" data-quick-log="shift">+ Shift completed</button>
+              <button type="button" data-quick-log="spending">+ Added spending</button>
+              <button type="button" data-quick-log="tips">+ Tips earned</button>
+            </div>
+            <div class="form-grid">
+              <label>Hours worked today<input id="logHours" type="number" min="0" step="0.5" /></label>
+              <label>Tips earned<input id="logTips" type="number" min="0" step="1" /></label>
+              <label>Spending today<input id="logSpending" type="number" min="0" step="1" /></label>
+              <label>Today felt like<select id="logMood">
+                <option>Chilling</option>
+                <option>Tired</option>
+                <option>Homesick</option>
+                <option>Grinding</option>
+                <option>Broke</option>
+                <option>Winning</option>
+              </select></label>
+              <label>City visited<input id="logCity" type="text" placeholder="New York City" /></label>
+              <label>Best moment<input id="logBestMoment" type="text" placeholder="First paycheck hit" /></label>
+            </div>
+            <label>Short note<input id="logNote" type="text" placeholder="Worked double shift, felt tired but okay..." /></label>
+            <button class="log-submit" type="submit">Log today</button>
+          </form>
         </div>
-      </aside>
+
+        <div class="summer-evolution-grid">
+          <article class="savings-timeline-wrap">
+            <div><span>Savings growth timeline</span><strong id="liveTimelineSummary">Final projection: $0</strong></div>
+            <div class="savings-timeline" id="liveSavingsTimeline"></div>
+          </article>
+          <article class="stress-console">
+            <div><span>Stress engine</span><strong id="liveStressLevel">Stable</strong></div>
+            <div class="stress-track"><div id="liveStressFill"></div></div>
+            <p id="liveStressCopy">Your control center is waiting for the first real log.</p>
+          </article>
+        </div>
+
+        <div class="memory-grid">
+          <article class="milestone-card">
+            <span>Summer memory signals</span>
+            <div id="summerMilestones"></div>
+          </article>
+          <article class="memory-card">
+            <span id="memoryTitle">Summer Memory Trail</span>
+            <div id="memoryTimeline"></div>
+            <form class="memory-memo-form" id="memoryMemoForm">
+              <label>Add memo<input id="memoryMemoText" type="text" placeholder="First NYC trip, double shift, payday..." /></label>
+              <button class="secondary-action" type="submit">Save memo</button>
+            </form>
+            <button class="secondary-action" id="clearLogsButton" type="button">Clear local logs</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="compare-section" aria-label="State comparison">
+        <header class="section-head compact">
+          <div><p class="eyebrow">Compare</p><h2>Compare the money math before choosing a placement.</h2></div>
+          <label>Compare states<select id="comparePicker"></select></label>
+        </header>
+        <p class="inline-notice" id="comparisonNotice">Choose 2-3 states to compare.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>State</th><th>WAT wage est.</th><th>Tax</th><th>Rent</th><th>Likely range</th><th>Reality tier</th></tr></thead>
+            <tbody id="comparisonBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="rankings-section" aria-label="Rankings">
+        <header class="section-head compact">
+          <div><p class="eyebrow">Rankings</p><h2>Fit rankings depend on the strategy you are testing.</h2></div>
+        </header>
+        <p class="inline-notice" id="rankingBasis">Ranking basis will appear here.</p>
+        <div class="ranking-tabs" id="rankingTabs"></div>
+        <div class="ranking-grid" id="rankingGrid"></div>
+      </section>
+
+      <section class="community-insights-section" aria-label="Heuristic WAT signals">
+        <header class="section-head compact">
+          <div><p class="eyebrow">Model notes</p><h2>Heuristic signals the system is watching.</h2></div>
+        </header>
+        <div class="community-insights" id="communityInsights"></div>
+      </section>
+
+      <section class="simulator-section" id="simulatorStage" aria-label="Bring Home Savings Simulator">
+        <header class="section-head">
+          <div><p class="eyebrow">Money simulation</p><h2>Bring Home Savings Simulator</h2></div>
+          <p>Hours, rent, tax, travel — see the final number before you commit.</p>
+        </header>
+        <div class="simulator-layout">
+          <form class="simulator-form" id="simulatorForm">
+            <div class="scenario-buttons" id="scenarioButtons"></div>
+            <div class="form-grid">
+              <label>State<select id="calcState"></select></label>
+              <label>Hourly wage<input id="hourlyWage" type="number" min="0" step="0.25" /></label>
+              <label>Hours per week<input id="hoursPerWeek" type="number" min="0" step="1" /></label>
+              <label>Working weeks<input id="workingWeeks" type="number" min="1" step="1" /></label>
+              <label>Monthly rent<input id="monthlyRent" type="number" min="0" step="25" /></label>
+              <label>Food spending<input id="foodSpend" type="number" min="0" step="25" /></label>
+              <label>Transport spending<input id="transportSpend" type="number" min="0" step="25" /></label>
+              <label>Other spending<input id="otherSpend" type="number" min="0" step="25" /></label>
+              <label>Travel budget after work<input id="travelBudgetAfterWork" type="number" min="0" step="50" /></label>
+            </div>
+            <label class="toggle-line"><input id="secondJobToggle" type="checkbox" /><span>Include optional second job</span></label>
+            <div class="form-grid second-job-fields" id="secondJobFields">
+              <label>Second job wage<input id="secondJobWage" type="number" min="0" step="0.25" /></label>
+              <label>Second job hours/week<input id="secondJobHours" type="number" min="0" step="1" /></label>
+            </div>
+            <p class="inline-notice" id="simulatorNotice" role="status"></p>
+          </form>
+
+          <div class="result-board" aria-live="polite">
+            <div class="bring-home-card">
+              <span>Likely return home</span>
+              <strong id="finalSavings">$0</strong>
+              <p id="savingsVerdict">Run a scenario to see your WAT money story.</p>
+              <div class="decision-summary" id="decisionSummary">What this means will appear after the money math runs.</div>
+              <div class="fix-first" id="fixFirst">Fix first: choose a state and run a scenario.</div>
+            </div>
+            <details class="savings-range-card" open>
+              <summary>Uncertainty and confidence</summary>
+              <div class="range-grid">
+                <article><span>Worst case</span><strong id="worstCaseSavings">$0</strong></article>
+                <article><span>Likely</span><strong id="likelyCaseSavings">$0</strong></article>
+                <article><span>Best case</span><strong id="bestCaseSavings">$0</strong></article>
+              </div>
+              <p id="savingsRangeInsight">Your final number depends mostly on rent, hours, and travel discipline.</p>
+            </details>
+            <div class="stress-meter">
+              <div><span>Stress level</span><strong id="stressLevel">Balanced</strong></div>
+              <div class="stress-track"><div id="stressFill"></div></div>
+              <p id="stressWhy">Stress explanation will appear here.</p>
+            </div>
+            <div class="savings-timeline-wrap">
+              <div><span>Trajectory</span><strong id="timelineSummary">Before travel: $0</strong></div>
+              <div class="savings-timeline" id="savingsTimeline"></div>
+            </div>
+            <details class="money-uses">
+              <summary>What this money can do</summary>
+              <div id="moneyUseCards"></div>
+            </details>
+            <details class="calculation-breakdown">
+              <summary>View calculation breakdown</summary>
+              <dl class="result-list">
+                <div><dt>Gross monthly income</dt><dd id="grossMonthly">$0</dd></div>
+                <div><dt>Estimated tax deduction</dt><dd id="taxDeduction">$0</dd></div>
+                <div><dt>Monthly living cost</dt><dd id="livingCost">$0</dd></div>
+                <div><dt>Monthly savings</dt><dd id="monthlySavings">$0</dd></div>
+                <div><dt>Total before travel</dt><dd id="totalBeforeTravel">$0</dd></div>
+                <div><dt>Travel deduction</dt><dd id="travelDeduction">$0</dd></div>
+              </dl>
+            </details>
+            <details class="source-basis-card simulator-assumptions-card">
+              <summary>Assumptions and data basis</summary>
+              <div id="simulatorAssumptions"></div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="travel-section" id="travelStage" aria-label="Post-WAT Travel Evidence Engine">
+        <header class="section-head">
+          <div><p class="eyebrow">Travel evidence</p><h2>Post-WAT Travel Evidence Engine</h2></div>
+          <p>Choose the places you want. The system explains what looks realistic, what is fragile, and what evidence supports the route.</p>
+        </header>
+        <div class="travel-layout">
+          <form class="travel-form" id="travelForm">
+            <div class="form-grid">
+              <label>Starting city/state<select id="travelState"></select></label>
+              <label>First travel city<select id="startCity"></select></label>
+              <label>Travel window<input id="travelDays" type="number" min="1" step="1" /></label>
+              <label>Total travel budget<input id="tripBudget" type="number" min="0" step="50" /></label>
+              <label>Travel style<select id="travelStyle"><option value="budget">Budget</option><option value="balanced">Balanced</option><option value="comfortable">Comfortable</option></select></label>
+            </div>
+            <fieldset class="interest-grid">
+              <legend>Choose trip vibe</legend>
+              <label><input type="checkbox" value="big cities" checked /> Big cities</label>
+              <label><input type="checkbox" value="nature" checked /> Nature</label>
+              <label><input type="checkbox" value="theme parks" /> Theme parks</label>
+              <label><input type="checkbox" value="beaches" /> Beaches</label>
+              <label><input type="checkbox" value="shopping" /> Shopping</label>
+              <label><input type="checkbox" value="food" /> Food</label>
+              <label><input type="checkbox" value="museums" /> Museums</label>
+              <label><input type="checkbox" value="nightlife" /> Nightlife</label>
+            </fieldset>
+            <p class="inline-notice" id="routePlannerNotice"></p>
+          </form>
+          <div class="trip-output">
+            <article class="route-card">
+              <span>Best-supported route</span>
+              <strong id="suggestedRoute">Route loading</strong>
+              <p id="tripWarning">Budget looks workable.</p>
+            </article>
+            <div class="route-meta evidence-meta">
+              <article><span>Route feasibility</span><strong id="routeFeasibility">Reading</strong></article>
+              <article><span>Travel freedom</span><strong id="travelFreedomLevel">Reading</strong></article>
+              <article><span>Route fragility</span><strong id="routeFragilityLevel">Reading</strong></article>
+              <article><span>Data confidence</span><strong id="travelDataConfidence">Simulation</strong></article>
+            </div>
+            <dl class="result-list">
+              <div><dt>Transport pressure</dt><dd id="transportCost">$0</dd></div>
+              <div><dt>Accommodation pressure</dt><dd id="accommodationCost">$0</dd></div>
+              <div><dt>Food pressure</dt><dd id="tripFoodCost">$0</dd></div>
+              <div><dt>Estimated cost pressure</dt><dd id="totalTripCost">$0</dd></div>
+            </dl>
+            <div class="recommended-stops" id="recommendedStops"></div>
+            <details class="source-basis-card travel-source-card" open>
+              <summary>Route evidence basis</summary>
+              <div id="travelSourceBasis"></div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="optimizer-section" aria-label="Custom travel evidence route">
+        <header class="section-head">
+          <div><p class="eyebrow">Route strategy</p><h2>Build your own evidence-backed route</h2></div>
+          <p>Select desired places. Must-visits stay protected, optional stops get cut first when the evidence gets weak.</p>
+        </header>
+        <div class="optimizer-layout">
+          <form class="optimizer-form" id="routeOptimizerForm">
+            <div class="form-grid">
+              <label>Starting city/state<select id="optimizerStart"></select></label>
+              <label>Ending city/state or airport<select id="optimizerEnd"></select></label>
+              <label>Travel days<input id="optimizerDays" type="number" min="1" step="1" /></label>
+              <label>Total travel budget<input id="optimizerBudget" type="number" min="0" step="50" /></label>
+              <label>Travel style<select id="optimizerStyle"><option value="budget">Budget</option><option value="balanced">Balanced</option><option value="comfortable">Comfortable</option></select></label>
+              <label>Transport preference<select id="optimizerTransport"><option value="cheapest">Cheapest</option><option value="fastest">Fastest</option><option value="bus">Bus</option><option value="train">Train</option><option value="flight">Flight</option></select></label>
+            </div>
+            <div class="route-picker-grid">
+              <label>Preferred destinations<select id="preferredPicker"></select><button type="button" data-add-location="preferred">Add preferred</button></label>
+              <label>Must-visit places<select id="mustPicker"></select><button type="button" data-add-location="must">Add must-visit</button></label>
+              <label>Optional places<select id="optionalPicker"></select><button type="button" data-add-location="optional">Add optional</button></label>
+            </div>
+            <textarea id="preferredDestinations" class="route-hidden-field" aria-label="Preferred destinations" readonly></textarea>
+            <textarea id="mustVisitPlaces" class="route-hidden-field" aria-label="Must visit places" readonly></textarea>
+            <textarea id="optionalPlaces" class="route-hidden-field" aria-label="Optional places" readonly></textarea>
+            <div class="chip-row" id="preferredChips"></div>
+            <div class="chip-row" id="mustChips"></div>
+            <div class="chip-row" id="optionalChips"></div>
+            <p class="inline-notice" id="routeOptimizerNotice"></p>
+          </form>
+            <div class="optimizer-output">
+            <article class="route-card">
+              <span>Best-supported route under current assumptions</span>
+              <strong id="optimizedRoute">Route loading</strong>
+              <p id="optimizerWarnings">Route looks workable.</p>
+            </article>
+            <div class="route-meta">
+              <article><span>Route intensity</span><strong id="routeIntensity">Balanced</strong></article>
+              <article><span>Route type</span><strong id="routeType">Low-backtracking route</strong></article>
+              <article><span>Evidence confidence</span><strong id="optimizerConfidence">Simulation</strong></article>
+              <article><span>Travel freedom</span><strong id="optimizerTravelFreedom">Reading</strong></article>
+            </div>
+            <div class="route-timeline" id="routeTimeline"></div>
+            <div class="optimized-stops" id="optimizedStops"></div>
+            <dl class="result-list">
+              <div><dt>Transport pressure</dt><dd id="optimizerTransportCost">$0</dd></div>
+              <div><dt>Accommodation pressure</dt><dd id="optimizerAccommodationCost">$0</dd></div>
+              <div><dt>Food pressure</dt><dd id="optimizerFoodCost">$0</dd></div>
+              <div><dt>Estimated route pressure</dt><dd id="optimizerTotalCost">$0</dd></div>
+            </dl>
+            <div class="alternative-routes">
+              <article><span>Cheaper route</span><strong id="cheaperRoute">Route loading</strong></article>
+              <article><span>Faster route</span><strong id="fasterRoute">Route loading</strong></article>
+            </div>
+            <details class="source-basis-card travel-source-card" open>
+              <summary>Evidence simulation basis</summary>
+              <div id="optimizerEvidenceBasis"></div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="recap-section" id="recapStage" aria-label="Final WAT outcome recap">
+        <header class="section-head">
+          <div><p class="eyebrow">Final outcome</p><h2>You survived the summer.</h2></div>
+          <p>Your whole WAT plan, compressed into one outcome.</p>
+        </header>
+        <div class="recap-layout">
+          <article class="final-summary">
+            <span id="summaryType">The Saver</span>
+            <h3 id="summaryHeadline">Your summer outcome is loading.</h3>
+            <div class="summary-grid">
+              <div><span>State</span><strong id="summaryState">New Jersey</strong></div>
+              <div><span>Weeks worked</span><strong id="summaryWeeks">13</strong></div>
+              <div><span>Stress</span><strong id="summaryStress">Stable</strong></div>
+              <div><span>Route</span><strong id="summaryRoute">Route loading</strong></div>
+            </div>
+            <p id="summaryVerdict">The system is reading your plan.</p>
+            <button class="primary-action" id="generateShareCard" type="button">Generate share card</button>
+          </article>
+          <article class="share-card" id="sharePoster">
+            <span id="posterType">THE SAVER</span>
+            <strong id="posterSavings">$0</strong>
+            <div class="poster-grid">
+              <div><span>Worked</span><strong id="posterWeeks">13 weeks</strong></div>
+              <div><span>Survived</span><strong id="posterState">New Jersey rent</strong></div>
+              <div><span>Visited</span><strong id="posterCities">0 cities</strong></div>
+              <div><span>Stress</span><strong id="posterStress">Stable</strong></div>
+            </div>
+            <p id="posterRoute">Route loading</p>
+            <p id="posterVerdict">Generate the card to lock the story.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="local-section" aria-label="Local reality signals">
+        <header class="section-head compact">
+          <div><p class="eyebrow">Placement risk signals</p><h2 id="localStateName">New Jersey</h2></div>
+        </header>
+        <article class="local-main-insight">
+          <span>Heuristic model · verify locally before accepting</span>
+          <strong id="localMainInsight">Employer housing decides your whole summer here.</strong>
+          <p id="localMainInsightCopy">Signals use public references, local estimates, user inputs, and transparent heuristics. They are not live employer data.</p>
+        </article>
+        <div class="local-grid" id="localRecommendations"></div>
+      </section>
+
+      <section class="data-transparency-section" aria-label="Data transparency">
+        <p class="eyebrow">Data transparency</p>
+        <p>This app combines public wage/tax/cost references, user inputs, and WAT-specific heuristic estimates. Housing, actual hours, tips, city taxes, employer conditions, and travel prices vary. Route/Places data is prepared for API integration but is not live yet.</p>
+      </section>
     </main>
 
+    <script src="data/states.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
     <script src="app.js"></script>
