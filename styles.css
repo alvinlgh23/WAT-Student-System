@@ -1667,6 +1667,99 @@ td.best-cell {
   min-width: 0;
 }
 
+.configuration-console {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: clamp(22px, 4vw, 42px);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(143, 190, 154, 0.12), transparent 34%),
+    rgba(245, 240, 231, 0.04);
+}
+
+.config-panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(245, 240, 231, 0.08);
+  overflow: hidden;
+}
+
+.config-panel summary {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: 16px;
+  align-items: center;
+  cursor: pointer;
+  padding: 18px;
+  color: var(--cream);
+  list-style: none;
+}
+
+.config-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.config-panel summary span {
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.config-panel summary strong {
+  color: var(--cream);
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.6vw, 2.2rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.config-panel[open] {
+  background: rgba(245, 240, 231, 0.1);
+}
+
+.config-panel > .form-grid,
+.config-panel > .live-ops-grid,
+.config-panel > .travel-config-grid,
+.config-panel > .personal-profile-form,
+.config-panel > .memory-memo-form,
+.config-panel > .scenario-buttons,
+.config-panel > .toggle-line,
+.config-panel > .inline-notice,
+.config-form .config-panel > .form-grid,
+.config-form .config-panel > .scenario-buttons,
+.config-form .config-panel > .toggle-line,
+.config-form .config-panel > .second-job-fields,
+.config-form .config-panel > .inline-notice {
+  margin: 0 18px 18px;
+}
+
+.config-form {
+  display: grid;
+  gap: 16px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.travel-config-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: 18px;
+}
+
+.simulator-layout.output-only {
+  grid-template-columns: 1fr;
+}
+
+.travel-layout .trip-output,
+.optimizer-layout .optimizer-output {
+  grid-column: 1 / -1;
+}
+
 .simulator-form,
 .travel-form,
 .optimizer-form,
@@ -2591,6 +2684,7 @@ label {
   .dashboard-grid,
   .live-dashboard-grid,
   .live-ops-grid,
+  .travel-config-grid,
   .summer-evolution-grid,
   .memory-grid,
   .simulator-layout,
@@ -2630,6 +2724,7 @@ label {
   .comparison-panel,
   .live-summer-section,
   .community-insights-section,
+  .configuration-console,
   .breathing-block,
   .student-type-section,
   .rankings-section,
@@ -2671,6 +2766,7 @@ label {
   .community-insights,
   .live-dashboard-grid,
   .live-ops-grid,
+  .travel-config-grid,
   .summer-evolution-grid,
   .memory-grid,
   .local-grid,
@@ -2699,6 +2795,12 @@ label {
   .control-row select {
     width: 100%;
     min-width: 0;
+  }
+
+  .config-panel summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px;
   }
 
   .map-wrap {

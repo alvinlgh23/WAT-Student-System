@@ -105,6 +105,195 @@
         </div>
       </section>
 
+      <section class="configuration-console" id="configurationStage" aria-label="WAT configuration console">
+        <header class="section-head compact">
+          <div>
+            <p class="eyebrow">Configuration console</p>
+            <h2>Adjust the inputs. Keep the system view clean.</h2>
+          </div>
+          <p>Setup lives here; the homepage stays focused on consequences, warnings, and strategy.</p>
+        </header>
+
+        <form class="simulator-form config-form" id="simulatorForm">
+          <details class="config-panel" open>
+            <summary><span>Cost setup</span><strong>Rent, food, transport, savings target</strong></summary>
+            <div class="form-grid">
+              <label>State<select id="calcState"></select></label>
+              <label>Monthly rent<input id="monthlyRent" type="number" min="0" step="25" /></label>
+              <label>Food spending<input id="foodSpend" type="number" min="0" step="25" /></label>
+              <label>Transport spending<input id="transportSpend" type="number" min="0" step="25" /></label>
+              <label>Other spending<input id="otherSpend" type="number" min="0" step="25" /></label>
+              <label>Travel budget after work<input id="travelBudgetAfterWork" type="number" min="0" step="50" /></label>
+            </div>
+            <p class="inline-notice">Cost inputs are user-provided unless a source basis says otherwise.</p>
+          </details>
+
+          <details class="config-panel" open>
+            <summary><span>Work reality</span><strong>Hours, overtime, second job, stability</strong></summary>
+            <div class="scenario-buttons" id="scenarioButtons"></div>
+            <div class="form-grid">
+              <label>Hourly wage<input id="hourlyWage" type="number" min="0" step="0.25" /></label>
+              <label>Hours per week<input id="hoursPerWeek" type="number" min="0" step="1" /></label>
+              <label>Working weeks<input id="workingWeeks" type="number" min="1" step="1" /></label>
+              <label>Schedule stability<select id="scheduleStability">
+                <option value="stable">Stable</option>
+                <option value="mixed">Mixed</option>
+                <option value="unstable">Unstable</option>
+              </select></label>
+              <label>Burnout tolerance<select id="burnoutTolerance">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select></label>
+              <label>Housing included<select id="housingIncluded">
+                <option value="unknown">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select></label>
+            </div>
+            <label class="toggle-line"><input id="secondJobToggle" type="checkbox" /><span>Include optional second job</span></label>
+            <div class="form-grid second-job-fields" id="secondJobFields">
+              <label>Second job wage<input id="secondJobWage" type="number" min="0" step="0.25" /></label>
+              <label>Second job hours/week<input id="secondJobHours" type="number" min="0" step="1" /></label>
+            </div>
+            <p class="inline-notice" id="simulatorNotice" role="status"></p>
+          </details>
+        </form>
+
+        <details class="config-panel" open>
+          <summary><span>Live tracking setup</span><strong>Dates, targets, paycheck, daily logs</strong></summary>
+          <div class="live-ops-grid">
+            <form class="summer-settings-form" id="summerSettingsForm">
+              <div class="form-grid">
+                <label>WAT start date<input id="watStartDate" type="date" /></label>
+                <label>WAT end date<input id="watEndDate" type="date" /></label>
+                <label>Weekly work target<input id="weeklyWorkTarget" type="number" min="1" step="1" /></label>
+                <label>Savings target<input id="savingsTarget" type="number" min="0" step="50" /></label>
+                <label>Pay frequency<select id="payFrequency">
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Biweekly</option>
+                  <option value="monthly">Monthly</option>
+                </select></label>
+                <label>Next payday<input id="nextPayday" type="date" /></label>
+              </div>
+              <button class="secondary-action" id="resetDemoButton" type="button">Reset local data</button>
+            </form>
+
+            <form class="daily-log-form" id="dailyLogForm">
+              <div class="quick-log-row">
+                <button type="button" data-quick-log="shift">+ Shift completed</button>
+                <button type="button" data-quick-log="spending">+ Added spending</button>
+                <button type="button" data-quick-log="tips">+ Tips earned</button>
+              </div>
+              <div class="form-grid">
+                <label>Hours worked today<input id="logHours" type="number" min="0" step="0.5" /></label>
+                <label>Tips earned<input id="logTips" type="number" min="0" step="1" /></label>
+                <label>Spending today<input id="logSpending" type="number" min="0" step="1" /></label>
+                <label>Today felt like<select id="logMood">
+                  <option>Chilling</option>
+                  <option>Tired</option>
+                  <option>Homesick</option>
+                  <option>Grinding</option>
+                  <option>Broke</option>
+                  <option>Winning</option>
+                </select></label>
+                <label>City visited<input id="logCity" type="text" placeholder="New York City" /></label>
+                <label>Best moment<input id="logBestMoment" type="text" placeholder="First paycheck hit" /></label>
+              </div>
+              <label>Short note<input id="logNote" type="text" placeholder="Worked double shift, felt tired but okay..." /></label>
+              <button class="log-submit" type="submit">Log today</button>
+            </form>
+          </div>
+        </details>
+
+        <details class="config-panel" open>
+          <summary><span>Travel mode</span><strong>Destinations, budget, pace, transport</strong></summary>
+          <div class="travel-config-grid">
+            <form class="travel-form" id="travelForm">
+              <div class="form-grid">
+                <label>Starting city/state<select id="travelState"></select></label>
+                <label>First travel city<select id="startCity"></select></label>
+                <label>Travel window<input id="travelDays" type="number" min="1" step="1" /></label>
+                <label>Total travel budget<input id="tripBudget" type="number" min="0" step="50" /></label>
+                <label>Travel style<select id="travelStyle"><option value="budget">Budget</option><option value="balanced">Balanced</option><option value="comfortable">Comfortable</option></select></label>
+                <label>Travel pace preference<select id="travelPacePreference">
+                  <option value="fast">Fast pace</option>
+                  <option value="balanced" selected>Balanced pace</option>
+                  <option value="deep">Deep explore</option>
+                </select></label>
+              </div>
+              <fieldset class="interest-grid">
+                <legend>Choose trip vibe</legend>
+                <label><input type="checkbox" value="big cities" checked /> Big cities</label>
+                <label><input type="checkbox" value="nature" checked /> Nature</label>
+                <label><input type="checkbox" value="theme parks" /> Theme parks</label>
+                <label><input type="checkbox" value="beaches" /> Beaches</label>
+                <label><input type="checkbox" value="shopping" /> Shopping</label>
+                <label><input type="checkbox" value="food" /> Food</label>
+                <label><input type="checkbox" value="museums" /> Museums</label>
+                <label><input type="checkbox" value="nightlife" /> Nightlife</label>
+              </fieldset>
+              <p class="inline-notice" id="routePlannerNotice"></p>
+            </form>
+
+            <form class="optimizer-form" id="routeOptimizerForm">
+              <div class="form-grid">
+                <label>Starting city/state<select id="optimizerStart"></select></label>
+                <label>Ending city/state or airport<select id="optimizerEnd"></select></label>
+                <label>Travel days<input id="optimizerDays" type="number" min="1" step="1" /></label>
+                <label>Total travel budget<input id="optimizerBudget" type="number" min="0" step="50" /></label>
+                <label>Travel style<select id="optimizerStyle"><option value="budget">Budget</option><option value="balanced">Balanced</option><option value="comfortable">Comfortable</option></select></label>
+                <label>Transport preference<select id="optimizerTransport"><option value="cheapest">Cheapest</option><option value="fastest">Fastest</option><option value="bus">Bus</option><option value="train">Train</option><option value="flight">Flight</option></select></label>
+              </div>
+              <div class="route-picker-grid">
+                <label>Preferred destinations<select id="preferredPicker"></select><button type="button" data-add-location="preferred">Add preferred</button></label>
+                <label>Must-visit places<select id="mustPicker"></select><button type="button" data-add-location="must">Add must-visit</button></label>
+                <label>Optional places<select id="optionalPicker"></select><button type="button" data-add-location="optional">Add optional</button></label>
+              </div>
+              <textarea id="preferredDestinations" class="route-hidden-field" aria-label="Preferred destinations" readonly></textarea>
+              <textarea id="mustVisitPlaces" class="route-hidden-field" aria-label="Must visit places" readonly></textarea>
+              <textarea id="optionalPlaces" class="route-hidden-field" aria-label="Optional places" readonly></textarea>
+              <div class="chip-row" id="preferredChips"></div>
+              <div class="chip-row" id="mustChips"></div>
+              <div class="chip-row" id="optionalChips"></div>
+              <p class="inline-notice" id="routeOptimizerNotice"></p>
+            </form>
+          </div>
+        </details>
+
+        <details class="config-panel">
+          <summary><span>Personal profile</span><strong>Risk, social spending, travel style</strong></summary>
+          <form class="personal-profile-form" id="personalProfileForm">
+            <div class="form-grid">
+              <label>Risk tolerance<select id="riskTolerance">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select></label>
+              <label>Social spending tendency<select id="socialSpending">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select></label>
+              <label>Travel style<select id="travelPersonality">
+                <option value="introvert">Introvert / slow travel</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="extrovert">Extrovert / city energy</option>
+              </select></label>
+              <label>Shopping tendency<select id="shoppingTendency">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select></label>
+            </div>
+          </form>
+          <form class="memory-memo-form" id="memoryMemoForm">
+            <label>Add memo<input id="memoryMemoText" type="text" placeholder="First NYC trip, double shift, payday..." /></label>
+            <button class="secondary-action" type="submit">Save memo</button>
+          </form>
+        </details>
+      </section>
+
       <section class="live-summer-section" id="liveSummer" aria-label="Live Summer Dashboard">
         <header class="section-head">
           <div>
@@ -139,49 +328,6 @@
           <article><span>Next paycheck</span><strong id="livePaycheckCountdown">0 days</strong></article>
         </div>
 
-        <div class="live-ops-grid">
-          <form class="summer-settings-form" id="summerSettingsForm">
-            <div class="form-grid">
-              <label>WAT start date<input id="watStartDate" type="date" /></label>
-              <label>WAT end date<input id="watEndDate" type="date" /></label>
-              <label>Weekly work target<input id="weeklyWorkTarget" type="number" min="1" step="1" /></label>
-              <label>Savings target<input id="savingsTarget" type="number" min="0" step="50" /></label>
-              <label>Pay frequency<select id="payFrequency">
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Biweekly</option>
-                <option value="monthly">Monthly</option>
-              </select></label>
-              <label>Next payday<input id="nextPayday" type="date" /></label>
-            </div>
-            <button class="secondary-action" id="resetDemoButton" type="button">Reset local data</button>
-          </form>
-
-          <form class="daily-log-form" id="dailyLogForm">
-            <div class="quick-log-row">
-              <button type="button" data-quick-log="shift">+ Shift completed</button>
-              <button type="button" data-quick-log="spending">+ Added spending</button>
-              <button type="button" data-quick-log="tips">+ Tips earned</button>
-            </div>
-            <div class="form-grid">
-              <label>Hours worked today<input id="logHours" type="number" min="0" step="0.5" /></label>
-              <label>Tips earned<input id="logTips" type="number" min="0" step="1" /></label>
-              <label>Spending today<input id="logSpending" type="number" min="0" step="1" /></label>
-              <label>Today felt like<select id="logMood">
-                <option>Chilling</option>
-                <option>Tired</option>
-                <option>Homesick</option>
-                <option>Grinding</option>
-                <option>Broke</option>
-                <option>Winning</option>
-              </select></label>
-              <label>City visited<input id="logCity" type="text" placeholder="New York City" /></label>
-              <label>Best moment<input id="logBestMoment" type="text" placeholder="First paycheck hit" /></label>
-            </div>
-            <label>Short note<input id="logNote" type="text" placeholder="Worked double shift, felt tired but okay..." /></label>
-            <button class="log-submit" type="submit">Log today</button>
-          </form>
-        </div>
-
         <div class="summer-evolution-grid">
           <article class="savings-timeline-wrap">
             <div><span>Savings growth timeline</span><strong id="liveTimelineSummary">Final projection: $0</strong></div>
@@ -202,10 +348,6 @@
           <article class="memory-card">
             <span id="memoryTitle">Summer Memory Trail</span>
             <div id="memoryTimeline"></div>
-            <form class="memory-memo-form" id="memoryMemoForm">
-              <label>Add memo<input id="memoryMemoText" type="text" placeholder="First NYC trip, double shift, payday..." /></label>
-              <button class="secondary-action" type="submit">Save memo</button>
-            </form>
             <button class="secondary-action" id="clearLogsButton" type="button">Clear local logs</button>
           </article>
         </div>
@@ -246,28 +388,7 @@
           <div><p class="eyebrow">Money simulation</p><h2>Bring Home Savings Simulator</h2></div>
           <p>Hours, rent, tax, travel — see the final number before you commit.</p>
         </header>
-        <div class="simulator-layout">
-          <form class="simulator-form" id="simulatorForm">
-            <div class="scenario-buttons" id="scenarioButtons"></div>
-            <div class="form-grid">
-              <label>State<select id="calcState"></select></label>
-              <label>Hourly wage<input id="hourlyWage" type="number" min="0" step="0.25" /></label>
-              <label>Hours per week<input id="hoursPerWeek" type="number" min="0" step="1" /></label>
-              <label>Working weeks<input id="workingWeeks" type="number" min="1" step="1" /></label>
-              <label>Monthly rent<input id="monthlyRent" type="number" min="0" step="25" /></label>
-              <label>Food spending<input id="foodSpend" type="number" min="0" step="25" /></label>
-              <label>Transport spending<input id="transportSpend" type="number" min="0" step="25" /></label>
-              <label>Other spending<input id="otherSpend" type="number" min="0" step="25" /></label>
-              <label>Travel budget after work<input id="travelBudgetAfterWork" type="number" min="0" step="50" /></label>
-            </div>
-            <label class="toggle-line"><input id="secondJobToggle" type="checkbox" /><span>Include optional second job</span></label>
-            <div class="form-grid second-job-fields" id="secondJobFields">
-              <label>Second job wage<input id="secondJobWage" type="number" min="0" step="0.25" /></label>
-              <label>Second job hours/week<input id="secondJobHours" type="number" min="0" step="1" /></label>
-            </div>
-            <p class="inline-notice" id="simulatorNotice" role="status"></p>
-          </form>
-
+        <div class="simulator-layout output-only">
           <div class="result-board" aria-live="polite">
             <div class="bring-home-card">
               <span>Likely return home</span>
@@ -323,27 +444,6 @@
           <p>Choose the places you want. The system explains what looks realistic, what is fragile, and what evidence supports the route.</p>
         </header>
         <div class="travel-layout">
-          <form class="travel-form" id="travelForm">
-            <div class="form-grid">
-              <label>Starting city/state<select id="travelState"></select></label>
-              <label>First travel city<select id="startCity"></select></label>
-              <label>Travel window<input id="travelDays" type="number" min="1" step="1" /></label>
-              <label>Total travel budget<input id="tripBudget" type="number" min="0" step="50" /></label>
-              <label>Travel style<select id="travelStyle"><option value="budget">Budget</option><option value="balanced">Balanced</option><option value="comfortable">Comfortable</option></select></label>
-            </div>
-            <fieldset class="interest-grid">
-              <legend>Choose trip vibe</legend>
-              <label><input type="checkbox" value="big cities" checked /> Big cities</label>
-              <label><input type="checkbox" value="nature" checked /> Nature</label>
-              <label><input type="checkbox" value="theme parks" /> Theme parks</label>
-              <label><input type="checkbox" value="beaches" /> Beaches</label>
-              <label><input type="checkbox" value="shopping" /> Shopping</label>
-              <label><input type="checkbox" value="food" /> Food</label>
-              <label><input type="checkbox" value="museums" /> Museums</label>
-              <label><input type="checkbox" value="nightlife" /> Nightlife</label>
-            </fieldset>
-            <p class="inline-notice" id="routePlannerNotice"></p>
-          </form>
           <div class="trip-output">
             <article class="route-card">
               <span>Best-supported route</span>
@@ -354,7 +454,7 @@
               <article><span>Route feasibility</span><strong id="routeFeasibility">Reading</strong></article>
               <article><span>Travel freedom</span><strong id="travelFreedomLevel">Reading</strong></article>
               <article><span>Route fragility</span><strong id="routeFragilityLevel">Reading</strong></article>
-              <article><span>Data confidence</span><strong id="travelDataConfidence">Simulation</strong></article>
+              <article><span>Data confidence</span><strong id="travelDataConfidence">API-ready estimate</strong></article>
             </div>
             <dl class="result-list">
               <div><dt>Transport pressure</dt><dd id="transportCost">$0</dd></div>
@@ -377,28 +477,6 @@
           <p>Select desired places. Must-visits stay protected, optional stops get cut first when the evidence gets weak.</p>
         </header>
         <div class="optimizer-layout">
-          <form class="optimizer-form" id="routeOptimizerForm">
-            <div class="form-grid">
-              <label>Starting city/state<select id="optimizerStart"></select></label>
-              <label>Ending city/state or airport<select id="optimizerEnd"></select></label>
-              <label>Travel days<input id="optimizerDays" type="number" min="1" step="1" /></label>
-              <label>Total travel budget<input id="optimizerBudget" type="number" min="0" step="50" /></label>
-              <label>Travel style<select id="optimizerStyle"><option value="budget">Budget</option><option value="balanced">Balanced</option><option value="comfortable">Comfortable</option></select></label>
-              <label>Transport preference<select id="optimizerTransport"><option value="cheapest">Cheapest</option><option value="fastest">Fastest</option><option value="bus">Bus</option><option value="train">Train</option><option value="flight">Flight</option></select></label>
-            </div>
-            <div class="route-picker-grid">
-              <label>Preferred destinations<select id="preferredPicker"></select><button type="button" data-add-location="preferred">Add preferred</button></label>
-              <label>Must-visit places<select id="mustPicker"></select><button type="button" data-add-location="must">Add must-visit</button></label>
-              <label>Optional places<select id="optionalPicker"></select><button type="button" data-add-location="optional">Add optional</button></label>
-            </div>
-            <textarea id="preferredDestinations" class="route-hidden-field" aria-label="Preferred destinations" readonly></textarea>
-            <textarea id="mustVisitPlaces" class="route-hidden-field" aria-label="Must visit places" readonly></textarea>
-            <textarea id="optionalPlaces" class="route-hidden-field" aria-label="Optional places" readonly></textarea>
-            <div class="chip-row" id="preferredChips"></div>
-            <div class="chip-row" id="mustChips"></div>
-            <div class="chip-row" id="optionalChips"></div>
-            <p class="inline-notice" id="routeOptimizerNotice"></p>
-          </form>
             <div class="optimizer-output">
             <article class="route-card">
               <span>Best-supported route under current assumptions</span>
@@ -408,7 +486,7 @@
             <div class="route-meta">
               <article><span>Route intensity</span><strong id="routeIntensity">Balanced</strong></article>
               <article><span>Route type</span><strong id="routeType">Low-backtracking route</strong></article>
-              <article><span>Evidence confidence</span><strong id="optimizerConfidence">Simulation</strong></article>
+              <article><span>Data confidence</span><strong id="optimizerConfidence">API-ready estimate</strong></article>
               <article><span>Travel freedom</span><strong id="optimizerTravelFreedom">Reading</strong></article>
             </div>
             <div class="route-timeline" id="routeTimeline"></div>
@@ -424,7 +502,7 @@
               <article><span>Faster route</span><strong id="fasterRoute">Route loading</strong></article>
             </div>
             <details class="source-basis-card travel-source-card" open>
-              <summary>Evidence simulation basis</summary>
+              <summary>Route evidence basis</summary>
               <div id="optimizerEvidenceBasis"></div>
             </details>
           </div>
@@ -483,6 +561,11 @@
     </main>
 
     <script src="data/states.js"></script>
+    <script src="services/maps.js"></script>
+    <script src="services/cost.js"></script>
+    <script src="services/wages.js"></script>
+    <script src="services/economy.js"></script>
+    <script src="services/travel.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
     <script src="app.js"></script>

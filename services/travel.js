@@ -1,0 +1,65 @@
+window.WAT_SERVICES = window.WAT_SERVICES || {};
+
+window.WAT_SERVICES.travel = {
+  status: "api-ready",
+  providers: {
+    maps: "Google Maps Platform",
+    lodging: "future lodging/hostel API",
+    places: "Google Places API",
+  },
+  routeSets: {
+    Northeast: ["New York City", "Boston", "Washington, DC", "Philadelphia"],
+    Southeast: ["Orlando", "Miami", "Savannah", "New Orleans"],
+    Midwest: ["Chicago", "St. Louis", "Nashville", "Minneapolis"],
+    West: ["Los Angeles", "San Francisco", "Las Vegas", "Seattle"],
+    Mountain: ["Denver", "Salt Lake City", "Grand Canyon", "Yellowstone"],
+    Pacific: ["Honolulu", "Maui", "Los Angeles", "San Francisco"],
+  },
+  interestRouteStops: {
+    "big cities": ["New York City", "Los Angeles", "Chicago", "Boston", "Washington, DC"],
+    nature: ["Grand Canyon", "Yellowstone", "Yosemite", "Denver", "Seattle"],
+    "theme parks": ["Orlando", "Los Angeles", "San Diego"],
+    beaches: ["Miami", "San Diego", "Honolulu", "Charleston"],
+    shopping: ["New York City", "Los Angeles", "Las Vegas", "Chicago"],
+    food: ["New York City", "Chicago", "New Orleans", "San Francisco"],
+    museums: ["Washington, DC", "New York City", "Boston", "Chicago"],
+    nightlife: ["New York City", "Miami", "Las Vegas", "New Orleans"],
+  },
+  cityEvidenceProfiles: {
+    "new york city": { poi: 96, rating: 4.6, reviews: 980000, types: ["big cities", "food", "museums", "nightlife", "shopping"], cost: "very high", trend: "High global demand year-round", openingRisk: "Low" },
+    boston: { poi: 76, rating: 4.5, reviews: 310000, types: ["big cities", "museums", "food"], cost: "high", trend: "Strong student/history demand", openingRisk: "Low" },
+    "washington, dc": { poi: 82, rating: 4.6, reviews: 420000, types: ["museums", "big cities", "food"], cost: "medium-high", trend: "Museum-heavy demand; many free attractions", openingRisk: "Low" },
+    philadelphia: { poi: 64, rating: 4.4, reviews: 210000, types: ["food", "museums", "big cities"], cost: "medium", trend: "Good value East Coast add-on", openingRisk: "Medium" },
+    miami: { poi: 72, rating: 4.4, reviews: 390000, types: ["beaches", "nightlife", "food"], cost: "high", trend: "Seasonal beach/nightlife demand", openingRisk: "Medium" },
+    orlando: { poi: 78, rating: 4.5, reviews: 520000, types: ["theme parks", "shopping", "food"], cost: "medium-high", trend: "Theme-park demand can spike lodging", openingRisk: "Low" },
+    chicago: { poi: 80, rating: 4.5, reviews: 430000, types: ["big cities", "food", "museums", "shopping"], cost: "medium", trend: "Strong summer city demand", openingRisk: "Low" },
+    "los angeles": { poi: 86, rating: 4.4, reviews: 760000, types: ["big cities", "theme parks", "beaches", "shopping", "nightlife"], cost: "very high", trend: "High demand, spread-out logistics", openingRisk: "Medium" },
+    "san francisco": { poi: 78, rating: 4.5, reviews: 360000, types: ["food", "museums", "nature", "big cities"], cost: "very high", trend: "Expensive but attraction dense", openingRisk: "Medium" },
+    "las vegas": { poi: 66, rating: 4.3, reviews: 450000, types: ["nightlife", "shopping", "food"], cost: "medium-high", trend: "Nightlife spending risk is high", openingRisk: "Low" },
+    denver: { poi: 62, rating: 4.5, reviews: 190000, types: ["nature", "food", "big cities"], cost: "medium-high", trend: "Good nature gateway", openingRisk: "Medium" },
+    seattle: { poi: 70, rating: 4.5, reviews: 260000, types: ["nature", "food", "museums", "big cities"], cost: "high", trend: "Good summer travel demand", openingRisk: "Medium" },
+    honolulu: { poi: 74, rating: 4.6, reviews: 350000, types: ["beaches", "nature", "food"], cost: "very high", trend: "Dream destination with expensive logistics", openingRisk: "Medium" },
+    "grand canyon": { poi: 68, rating: 4.8, reviews: 280000, types: ["nature"], cost: "medium", trend: "Seasonal nature demand", openingRisk: "High" },
+    yellowstone: { poi: 72, rating: 4.8, reviews: 240000, types: ["nature"], cost: "medium-high", trend: "Seasonal lodging pressure near park", openingRisk: "High" },
+    yosemite: { poi: 72, rating: 4.8, reviews: 260000, types: ["nature"], cost: "high", trend: "Permit/lodging constraints can bite", openingRisk: "High" },
+  },
+  evidenceSourceBasis: [
+    "Distance/time: Google Routes API-ready. Current build uses a local coordinate heuristic.",
+    "Attractions: Google Places API-ready. Current build uses local placeholder POI, rating, and review-volume fields.",
+    "Popularity: Google Trends API alpha-ready. Current build uses placeholder trend notes.",
+    "Costs: heuristic city cost pressure, not live pricing.",
+    "Accommodation: placeholder until hostel/hotel API integration is connected.",
+    "Route evidence is currently estimated. Connect Google Routes/Places API for live validation.",
+  ],
+  paceLabels: ["Fast pace", "Balanced pace", "Deep explore"],
+  capabilities: [
+    "transport burden",
+    "budget survivability",
+    "route pressure",
+    "pace difficulty",
+    "nearest departure airport",
+  ],
+  getSourceBasis() {
+    return "Travel evidence is API-ready, not live pricing. Current route output is a strategy estimate based on budget, distance heuristics, and selected destinations.";
+  },
+};
