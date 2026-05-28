@@ -21,7 +21,7 @@ window.WAT_STATE_DATA = {
     fredMacro: { label: "Macro pressure", source: "FRED API-ready", status: "future integration for CPI, inflation, and gas-price pressure", confidence: "medium once connected" },
     googleMaps: { label: "Maps and places", source: "Google Maps Platform-ready", status: "future integration for Places, Directions, Distance Matrix", confidence: "low until connected" },
     routeDistance: { label: "Route distance/time", source: "Google Routes API-ready", status: "future live integration", confidence: "low until connected" },
-    places: { label: "Attraction density / reviews", source: "Google Places API-ready", status: "future live integration", confidence: "low until connected" },
+    places: { label: "Places interest signal / reviews", source: "Google Places API-ready", status: "future live integration", confidence: "low until connected" },
     studentReports: { label: "WAT student reports", source: "future user-submitted data", status: "not available yet", confidence: "none yet" },
   },
   fipsToCode: {

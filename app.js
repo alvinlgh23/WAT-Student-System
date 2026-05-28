@@ -574,6 +574,7 @@ const elements = {
   secondJobFields: document.querySelector("#secondJobFields"),
   secondJobWage: document.querySelector("#secondJobWage"),
   secondJobHours: document.querySelector("#secondJobHours"),
+  overtimeReality: document.querySelector("#overtimeReality"),
   scheduleStability: document.querySelector("#scheduleStability"),
   burnoutTolerance: document.querySelector("#burnoutTolerance"),
   housingIncluded: document.querySelector("#housingIncluded"),
@@ -843,6 +844,7 @@ function createDefaultAppState() {
     activeScenario: "normal",
     simulatorInputs: normalScenario,
     workReality: {
+      overtimeReality: "possible",
       scheduleStability: "stable",
       burnoutTolerance: "medium",
       housingIncluded: "unknown",
@@ -1342,6 +1344,8 @@ function calculateStressLevel(context) {
   else if (targetGap > 600) score -= 10;
 
   score += MOOD_STRESS[recentMood] || 0;
+  if (workReality.overtimeReality === "none" && workRatio > 1.05) score += 8;
+  if (workReality.overtimeReality === "likely" && workRatio > 1.2) score += 4;
   if (workReality.scheduleStability === "unstable") score += 10;
   if (workReality.scheduleStability === "mixed") score += 5;
   if (workReality.burnoutTolerance === "low") score += 8;
@@ -1754,13 +1758,13 @@ function getStayRecommendation({ city, previous, input, role = "preferred", rema
     : stopType === "Long-distance add-on"
     ? `${city} adds a major distance jump. Keep it only if it is emotionally important or budget improves.`
     : stopType === "Main stop"
-      ? `${city} has strong attraction density and matches your selected interests, but daily cost still controls the stay.`
+      ? `${city} has a strong places signal for your selected interests, but daily cost still controls the stay.`
       : `${city} works as a shorter stop because it adds value without needing the whole route to bend around it.`;
   const whyNotLonger = [
     budgetPressure > 1 ? "budget pressure is already visible" : "longer stays reduce flexibility for later cities",
     longJump ? "travel time from the previous stop adds fatigue" : "route fatigue rises if every stop becomes a main stop",
     profile.cost.includes("high") ? "daily city cost is elevated" : "interest match does not justify using too much of the travel window",
-    role === "optional" ? "optional status means it should be cut before must-visits" : "must-visit status protects it, but not unlimited nights",
+    role === "optional" ? "optional status means it should be cut before must-visits" : "must-visit status protects it, but not unlimited stay length",
   ];
   const downsideSignals = [
     profile.cost.includes("high") ? "high accommodation cost" : "",
@@ -1797,7 +1801,7 @@ function getStayRecommendation({ city, previous, input, role = "preferred", rema
       trendSignal: {
         popularityTrend: profile.trend,
         seasonalityNote: "Placeholder trend signal until Google Trends API alpha is connected.",
-        source: "Google Trends API alpha / placeholder",
+        source: "Google Trends API alpha-ready / local heuristic",
       },
       downsideSignals,
     },
@@ -1832,7 +1836,7 @@ function classifyRouteEvidence({ route, cost, input, evidence = [] }) {
       `Increase travel budget by ${moneyWhole(Math.max(150, cost.total - input.budget + 250))}`,
       "Remove one flight-heavy city",
       "Switch to bus/train where regional transfers are realistic",
-      "Reduce expensive nightlife cities",
+      "Reduce expensive nightlife-heavy cities",
       "Keep one recovery day unplanned",
     ],
   };
@@ -2186,7 +2190,7 @@ function sanitizeSimulatorInput(input) {
 
 function getSimulatorInputWarnings(input) {
   const warnings = [];
-  if (input.hoursPerWeek > 80) warnings.push("Hours look extremely high. Projection capped to keep the demo sane.");
+  if (input.hoursPerWeek > 80) warnings.push("Hours look extremely high. Projection is capped to avoid unrealistic planning assumptions.");
   if (input.workingWeeks > 32) warnings.push("Working weeks look long for a WAT season. Verify your actual program dates.");
   return warnings;
 }
@@ -2248,6 +2252,7 @@ function applyCustomRouteInputs(input) {
 
 function getWorkRealitySnapshot() {
   return {
+    overtimeReality: elements.overtimeReality?.value || "possible",
     scheduleStability: elements.scheduleStability?.value || "stable",
     burnoutTolerance: elements.burnoutTolerance?.value || "medium",
     housingIncluded: elements.housingIncluded?.value || "unknown",
@@ -2267,6 +2272,7 @@ function getPersonalProfileSnapshot() {
 function applyProfileInputs() {
   const work = appState.workReality || {};
   const profile = appState.personalProfile || {};
+  if (elements.overtimeReality) elements.overtimeReality.value = work.overtimeReality || "possible";
   if (elements.scheduleStability) elements.scheduleStability.value = work.scheduleStability || "stable";
   if (elements.burnoutTolerance) elements.burnoutTolerance.value = work.burnoutTolerance || "medium";
   if (elements.housingIncluded) elements.housingIncluded.value = work.housingIncluded || "unknown";
@@ -2889,6 +2895,8 @@ function updateCalculator() {
   const stress = outcome.stress;
   appState.simulatorInputs = input;
   appState.workReality = getWorkRealitySnapshot();
+  liveSummerState.savingsTarget = sanitizeNumber(elements.savingsTarget?.value, liveSummerState.savingsTarget || 5200, 0, 50000);
+  appState.summerSettings = { ...appState.summerSettings, savingsTarget: liveSummerState.savingsTarget };
   appState.selectedState = input.stateCode;
   activeState = input.stateCode;
   recalculateDerivedState();
@@ -3041,11 +3049,11 @@ function renderSimulatorAssumptions(input, result) {
   const assumptions = [
     {
       label: "Wage basis",
-      value: `User input ${money(input.hourlyWage)}. Compare against ${dataSourceRegistry.minimumWage?.label || "state minimum wage"} and the WAT wage estimate; actual offer depends on employer, city, tips, and overtime.`,
+      value: `User input ${money(input.hourlyWage)}. ${serviceRegistry.wages?.getWageEvidence?.().basis || "Compare against public wage-floor data and employer offer details."}`,
     },
     {
       label: "Rent basis",
-      value: `User input ${moneyWhole(input.monthlyRent)}/month. Reference basis: ${dataSourceRegistry.rent?.source || "HUD FMR / local rent estimate / future student reports"}.`,
+      value: `User input ${moneyWhole(input.monthlyRent)}/month. ${serviceRegistry.cost?.getCostEvidence?.().basis || `Reference basis: ${dataSourceRegistry.rent?.source || "HUD FMR / local rent estimate / future student reports"}.`}`,
     },
     {
       label: "Tax basis",
@@ -3053,13 +3061,13 @@ function renderSimulatorAssumptions(input, result) {
     },
     {
       label: "Cost basis",
-      value: `Food, transport, and other costs are user inputs. Benchmark basis: ${dataSourceRegistry.livingCost?.source || "MIT Living Wage / BLS CPI"}.`,
+      value: `Food, transport, and misc costs are user inputs. Benchmark basis: ${dataSourceRegistry.livingCost?.source || "MIT Living Wage / BLS CPI"}. ${serviceRegistry.economy?.getMacroEvidence?.().basis || ""}`,
     },
     {
       label: "Travel basis",
       value: routeTotal > 0
         ? `Route cost pressure uses the current route heuristic (${moneyWhole(routeTotal)}). This is not live travel pricing.`
-        : `Travel budget is user-provided. Route distance, attractions, and lodging are API-ready estimates, not live pricing.`,
+        : `Travel budget is user-provided. ${serviceRegistry.travel?.getTravelEvidence?.().basis || "Route distance, places, and lodging are API-ready estimates, not live pricing."}`,
     },
     {
       label: "Confidence",
@@ -3620,15 +3628,15 @@ function updateSummerDashboard() {
   elements.daysCompleted.textContent = `${projection.progress.completedDays} days completed`;
   elements.summerCompletion.textContent = `${Math.round(projection.progress.percentComplete)}% complete`;
   animateNumber(elements.liveProjectedSavings, projection.projectedBeforeTravel);
-  animateNumber(elements.liveTrackedEarnings, projection.totals.earnings);
-  animateNumber(elements.liveTrackedSpending, projection.totals.spending);
-  animateNumber(elements.liveAfterTravel, projection.finalSavings);
-  animateNumber(elements.liveWeeklyHours, weekly.hours, (value) => numberWhole(value));
-  elements.liveWorkIntensity.textContent = getWorkIntensity(weekly.hours);
-  elements.liveSavingsTrend.textContent = getSavingsTrend(projection);
+  elements.liveTrackedEarnings.textContent = derivedState.burnoutRisk >= 75 ? "High" : derivedState.burnoutRisk >= 52 ? "Rising" : "Contained";
+  elements.liveTrackedSpending.textContent = `${derivedState.travelFreedom || 0}/100`;
+  elements.liveAfterTravel.textContent = derivedState.financialState || (projection.finalSavings < 0 ? "Underwater" : "Manageable");
+  elements.liveWeeklyHours.textContent = `${derivedState.survivalStability || 0}/100`;
+  elements.liveWorkIntensity.textContent = derivedState.confidenceLevel || "Medium";
+  elements.liveSavingsTrend.textContent = getSummaryWarning({ projection, travel, stress, world: derivedState });
   const travelFundPercent = Math.round(clamp((projection.projectedBeforeTravel / Math.max(projection.target, 1)) * 100, 0, 140));
-  elements.liveTravelFund.textContent = `${travelFundPercent}%`;
-  elements.livePaycheckCountdown.textContent = paycheck.countdown === 0 ? `${moneyWhole(paycheck.postTax)} today` : `${paycheck.countdown} day${paycheck.countdown === 1 ? "" : "s"}`;
+  elements.liveTravelFund.textContent = getSummaryOpportunity({ projection, travelFundPercent, paycheck });
+  elements.livePaycheckCountdown.textContent = derivedState.emotionalTone || derivedState.momentumState || "Watching";
   elements.liveInsight.textContent = `${getLiveInsight(projection, weekly, travel, stress)} ${getHumanInsight("travelFund", travelFundPercent)}`;
   elements.liveStressLevel.textContent = stress.label;
   elements.liveStressFill.style.width = `${stress.value}%`;
@@ -3651,6 +3659,22 @@ function updateStickySummerStatus(projection = buildSavingsProjection(), stress 
   elements.stickySummerText.textContent = buildStickyStatus(projection, stress);
 }
 
+function getSummaryWarning({ projection, travel, stress, world }) {
+  if (projection.finalSavings < 0) return "Route over budget";
+  if ((world?.routeFragility || 0) > 70) return "Route fragile";
+  if ((world?.housingPressure || 0) > 70) return "Housing pressure";
+  if ((world?.schedulePressure || 0) > 72 || stress.value > 76) return "Schedule heavy";
+  if (travel.afterTravel < 800) return "Thin buffer";
+  return "No major break";
+}
+
+function getSummaryOpportunity({ projection, travelFundPercent, paycheck }) {
+  if (projection.finalSavings > 3500) return "Route can breathe";
+  if (travelFundPercent >= 85) return "Travel fund forming";
+  if (paycheck.postTax > 0) return `${moneyWhole(paycheck.postTax)} next deposit`;
+  return "Log shifts to unlock";
+}
+
 function getCommunityStyleInsights() {
   return [
     {
@@ -3663,7 +3687,7 @@ function getCommunityStyleInsights() {
     },
     {
       label: "API-ready travel signal",
-      text: "Route distance, travel time, and attraction density are estimated until Google Routes/Places are connected.",
+      text: "Route distance, travel time, and places signals are heuristic until Google Routes/Places are connected.",
     },
     {
       label: "Future student data needed",
@@ -3734,13 +3758,13 @@ function updateTravelPlanner() {
     ...result.stops.map((stop) => {
       const card = document.createElement("article");
       card.className = "stop-card";
-      const signals = stop.evidence?.downsideSignals?.length ? stop.evidence.downsideSignals.join(", ") : "no major downside signal in placeholder model";
+      const signals = stop.evidence?.downsideSignals?.length ? stop.evidence.downsideSignals.join(", ") : "no major downside signal in the current heuristic";
       card.innerHTML = `
         <small>${stop.recommendation?.stopType || "Route stop"} · suggested ${stop.recommendation?.suggestedStayRange || "1-2 nights"}</small>
         <strong>${stop.city}</strong>
         <span>${stop.note}</span>
         <p><b>Why not longer?</b> ${(stop.recommendation?.whyNotLonger || []).slice(0, 2).join("; ")}.</p>
-        <p><b>Evidence:</b> POI estimate ${stop.evidence?.googlePlaces?.attractionDensityEstimate || "not connected"} · cost tier ${stop.evidence?.costPressure?.cityCostTier || "estimated"} · ${signals}.</p>
+        <p><b>Evidence basis:</b> places signal ${stop.evidence?.googlePlaces?.attractionDensityEstimate || "not connected"} · cost tier ${stop.evidence?.costPressure?.cityCostTier || "estimated"} · ${signals}.</p>
       `;
       return card;
     }),

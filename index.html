@@ -105,6 +105,65 @@
         </div>
       </section>
 
+      <section class="live-summer-section" id="liveSummer" aria-label="Live Summer Dashboard">
+        <header class="section-head">
+          <div>
+            <p class="eyebrow">Live system</p>
+            <h2>Live Summer Dashboard</h2>
+          </div>
+          <p id="liveInsight">Log your first shift to wake the system up.</p>
+        </header>
+
+        <div class="summer-status">
+          <div>
+            <span>Summer status</span>
+            <strong id="summerDayCount">Day 1 / 120</strong>
+            <p id="summerStatusLine">Your summer has not started yet.</p>
+          </div>
+          <div class="summer-progress-track"><div id="summerProgressFill"></div></div>
+          <div class="summer-progress-meta">
+            <span id="daysCompleted">0 days completed</span>
+            <span id="summerCompletion">0% complete</span>
+          </div>
+        </div>
+
+        <div class="live-metric-grid">
+          <article><span>Projected savings</span><strong id="liveProjectedSavings">$0</strong></article>
+          <article><span>Burnout risk</span><strong id="liveTrackedEarnings">Reading</strong></article>
+          <article><span>Travel freedom</span><strong id="liveTrackedSpending">Reading</strong></article>
+          <article><span>Financial pressure</span><strong id="liveAfterTravel">Reading</strong></article>
+          <article><span>Survivability</span><strong id="liveWeeklyHours">Reading</strong></article>
+          <article><span>Confidence level</span><strong id="liveWorkIntensity">Reading</strong></article>
+          <article><span>Warning</span><strong id="liveSavingsTrend">Watching</strong></article>
+          <article><span>Opportunity</span><strong id="liveTravelFund">Watching</strong></article>
+          <article><span>System mode</span><strong id="livePaycheckCountdown">Reading</strong></article>
+        </div>
+
+        <div class="summer-evolution-grid">
+          <article class="savings-timeline-wrap">
+            <div><span>Savings growth timeline</span><strong id="liveTimelineSummary">Final projection: $0</strong></div>
+            <div class="savings-timeline" id="liveSavingsTimeline"></div>
+          </article>
+          <article class="stress-console">
+            <div><span>Stress engine</span><strong id="liveStressLevel">Stable</strong></div>
+            <div class="stress-track"><div id="liveStressFill"></div></div>
+            <p id="liveStressCopy">Your control center is waiting for the first real log.</p>
+          </article>
+        </div>
+
+        <div class="memory-grid">
+          <article class="milestone-card">
+            <span>Summer memory signals</span>
+            <div id="summerMilestones"></div>
+          </article>
+          <article class="memory-card">
+            <span id="memoryTitle">Summer Memory Trail</span>
+            <div id="memoryTimeline"></div>
+            <button class="secondary-action" id="clearLogsButton" type="button">Clear local logs</button>
+          </article>
+        </div>
+      </section>
+
       <section class="configuration-console" id="configurationStage" aria-label="WAT configuration console">
         <header class="section-head compact">
           <div>
@@ -124,6 +183,7 @@
               <label>Transport spending<input id="transportSpend" type="number" min="0" step="25" /></label>
               <label>Other spending<input id="otherSpend" type="number" min="0" step="25" /></label>
               <label>Travel budget after work<input id="travelBudgetAfterWork" type="number" min="0" step="50" /></label>
+              <label>Savings target<input id="savingsTarget" type="number" min="0" step="50" /></label>
             </div>
             <p class="inline-notice">Cost inputs are user-provided unless a source basis says otherwise.</p>
           </details>
@@ -135,6 +195,11 @@
               <label>Hourly wage<input id="hourlyWage" type="number" min="0" step="0.25" /></label>
               <label>Hours per week<input id="hoursPerWeek" type="number" min="0" step="1" /></label>
               <label>Working weeks<input id="workingWeeks" type="number" min="1" step="1" /></label>
+              <label>Overtime reality<select id="overtimeReality">
+                <option value="none">No overtime expected</option>
+                <option value="possible" selected>Possible but not guaranteed</option>
+                <option value="likely">Likely if hours stay available</option>
+              </select></label>
               <label>Schedule stability<select id="scheduleStability">
                 <option value="stable">Stable</option>
                 <option value="mixed">Mixed</option>
@@ -168,7 +233,6 @@
                 <label>WAT start date<input id="watStartDate" type="date" /></label>
                 <label>WAT end date<input id="watEndDate" type="date" /></label>
                 <label>Weekly work target<input id="weeklyWorkTarget" type="number" min="1" step="1" /></label>
-                <label>Savings target<input id="savingsTarget" type="number" min="0" step="50" /></label>
                 <label>Pay frequency<select id="payFrequency">
                   <option value="weekly">Weekly</option>
                   <option value="biweekly">Biweekly</option>
@@ -294,65 +358,6 @@
         </details>
       </section>
 
-      <section class="live-summer-section" id="liveSummer" aria-label="Live Summer Dashboard">
-        <header class="section-head">
-          <div>
-            <p class="eyebrow">Live system</p>
-            <h2>Live Summer Dashboard</h2>
-          </div>
-          <p id="liveInsight">Log your first shift to wake the system up.</p>
-        </header>
-
-        <div class="summer-status">
-          <div>
-            <span>Summer status</span>
-            <strong id="summerDayCount">Day 1 / 120</strong>
-            <p id="summerStatusLine">Your summer has not started yet.</p>
-          </div>
-          <div class="summer-progress-track"><div id="summerProgressFill"></div></div>
-          <div class="summer-progress-meta">
-            <span id="daysCompleted">0 days completed</span>
-            <span id="summerCompletion">0% complete</span>
-          </div>
-        </div>
-
-        <div class="live-metric-grid">
-          <article><span>Projected return home</span><strong id="liveProjectedSavings">$0</strong></article>
-          <article><span>Total tracked earnings</span><strong id="liveTrackedEarnings">$0</strong></article>
-          <article><span>Total tracked spending</span><strong id="liveTrackedSpending">$0</strong></article>
-          <article><span>After-travel estimate</span><strong id="liveAfterTravel">$0</strong></article>
-          <article><span>Hours this week</span><strong id="liveWeeklyHours">0</strong></article>
-          <article><span>Work intensity</span><strong id="liveWorkIntensity">Watching</strong></article>
-          <article><span>Savings trend</span><strong id="liveSavingsTrend">Watching</strong></article>
-          <article><span>Travel fund</span><strong id="liveTravelFund">0%</strong></article>
-          <article><span>Next paycheck</span><strong id="livePaycheckCountdown">0 days</strong></article>
-        </div>
-
-        <div class="summer-evolution-grid">
-          <article class="savings-timeline-wrap">
-            <div><span>Savings growth timeline</span><strong id="liveTimelineSummary">Final projection: $0</strong></div>
-            <div class="savings-timeline" id="liveSavingsTimeline"></div>
-          </article>
-          <article class="stress-console">
-            <div><span>Stress engine</span><strong id="liveStressLevel">Stable</strong></div>
-            <div class="stress-track"><div id="liveStressFill"></div></div>
-            <p id="liveStressCopy">Your control center is waiting for the first real log.</p>
-          </article>
-        </div>
-
-        <div class="memory-grid">
-          <article class="milestone-card">
-            <span>Summer memory signals</span>
-            <div id="summerMilestones"></div>
-          </article>
-          <article class="memory-card">
-            <span id="memoryTitle">Summer Memory Trail</span>
-            <div id="memoryTimeline"></div>
-            <button class="secondary-action" id="clearLogsButton" type="button">Clear local logs</button>
-          </article>
-        </div>
-      </section>
-
       <section class="compare-section" aria-label="State comparison">
         <header class="section-head compact">
           <div><p class="eyebrow">Compare</p><h2>Compare the money math before choosing a placement.</h2></div>
@@ -385,7 +390,7 @@
 
       <section class="simulator-section" id="simulatorStage" aria-label="Bring Home Savings Simulator">
         <header class="section-head">
-          <div><p class="eyebrow">Money simulation</p><h2>Bring Home Savings Simulator</h2></div>
+          <div><p class="eyebrow">Money strategy</p><h2>Bring Home Savings Simulator</h2></div>
           <p>Hours, rent, tax, travel — see the final number before you commit.</p>
         </header>
         <div class="simulator-layout output-only">
@@ -454,7 +459,7 @@
               <article><span>Route feasibility</span><strong id="routeFeasibility">Reading</strong></article>
               <article><span>Travel freedom</span><strong id="travelFreedomLevel">Reading</strong></article>
               <article><span>Route fragility</span><strong id="routeFragilityLevel">Reading</strong></article>
-              <article><span>Data confidence</span><strong id="travelDataConfidence">API-ready estimate</strong></article>
+              <article><span>Data confidence</span><strong id="travelDataConfidence">Heuristic estimate</strong></article>
             </div>
             <dl class="result-list">
               <div><dt>Transport pressure</dt><dd id="transportCost">$0</dd></div>
@@ -486,7 +491,7 @@
             <div class="route-meta">
               <article><span>Route intensity</span><strong id="routeIntensity">Balanced</strong></article>
               <article><span>Route type</span><strong id="routeType">Low-backtracking route</strong></article>
-              <article><span>Data confidence</span><strong id="optimizerConfidence">API-ready estimate</strong></article>
+              <article><span>Data confidence</span><strong id="optimizerConfidence">Heuristic estimate</strong></article>
               <article><span>Travel freedom</span><strong id="optimizerTravelFreedom">Reading</strong></article>
             </div>
             <div class="route-timeline" id="routeTimeline"></div>

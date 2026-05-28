@@ -7,6 +7,12 @@ window.WAT_SERVICES.travel = {
     lodging: "future lodging/hostel API",
     places: "Google Places API",
   },
+  integration: {
+    requiresBackendProxy: true,
+    requiredKeys: ["GOOGLE_MAPS_API_KEY"],
+    optionalKeys: ["GOOGLE_TRENDS_ALPHA_ACCESS", "LODGING_API_KEY"],
+    plannedEndpoints: ["Google Places API", "Google Directions API", "Google Distance Matrix API"],
+  },
   routeSets: {
     Northeast: ["New York City", "Boston", "Washington, DC", "Philadelphia"],
     Southeast: ["Orlando", "Miami", "Savannah", "New Orleans"],
@@ -45,10 +51,10 @@ window.WAT_SERVICES.travel = {
   },
   evidenceSourceBasis: [
     "Distance/time: Google Routes API-ready. Current build uses a local coordinate heuristic.",
-    "Attractions: Google Places API-ready. Current build uses local placeholder POI, rating, and review-volume fields.",
-    "Popularity: Google Trends API alpha-ready. Current build uses placeholder trend notes.",
+    "Places signal: Google Places API-ready. Current build uses local heuristic POI, rating, and review-volume fields.",
+    "Popularity: Google Trends API alpha-ready. Current build uses local trend notes, not live search demand.",
     "Costs: heuristic city cost pressure, not live pricing.",
-    "Accommodation: placeholder until hostel/hotel API integration is connected.",
+    "Accommodation: estimated until hostel/hotel API integration is connected.",
     "Route evidence is currently estimated. Connect Google Routes/Places API for live validation.",
   ],
   paceLabels: ["Fast pace", "Balanced pace", "Deep explore"],
@@ -61,5 +67,12 @@ window.WAT_SERVICES.travel = {
   ],
   getSourceBasis() {
     return "Travel evidence is API-ready, not live pricing. Current route output is a strategy estimate based on budget, distance heuristics, and selected destinations.";
+  },
+  getTravelEvidence() {
+    return {
+      status: "api-ready estimate",
+      basis: "Routes, Places, and Distance Matrix are prepared as future integrations. Current output is a transparent route-pressure heuristic.",
+      confidence: "low until live Maps/Places validation is connected",
+    };
   },
 };
